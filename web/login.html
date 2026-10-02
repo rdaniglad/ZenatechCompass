@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<title>Sign in · Compass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Same tokens as the Compass app, so sign-in feels like the front door of the same product.
+     Layout: a chart-room panel (graticule + event pins) beside a single focused form; stacks on phones. */
+  :root{
+    --bg:#f5f7fb; --bg2:#eaeef5; --panel:#ffffff; --line:#d8dee8; --line-soft:#e4e8f0;
+    --text:#161c2b; --text-dim:#5a6478; --text-faint:#8a93a6;
+    --cyan:#0e9488; --cyan-dim:#87d3c9; --accent-hover:#0b7d72; --on-accent:#ffffff;
+    --amber:#b5720f; --violet:#7256e0; --rose:#d64545; --rose-bg:rgba(214,69,69,.07); --ok-bg:rgba(14,148,136,.08);
+    --grid:#d3dae6; --grid-strong:#b9c3d4; --chart-bg:#eaeef5;
+    --shadow:0 18px 50px rgba(30,40,60,.10);
+    --display:'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+    --body:'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+    --bg:#0e1219; --bg2:#141923; --panel:#1a202c; --line:#2d3546; --line-soft:#232a38;
+    --text:#e5e9f1; --text-dim:#a2abbe; --text-faint:#6f7a90;
+    --cyan:#2bbfae; --cyan-dim:#1c625b; --accent-hover:#35d3c1; --on-accent:#05211d;
+    --amber:#f0b45a; --violet:#a596ff; --rose:#f07a7a; --rose-bg:rgba(240,122,122,.09); --ok-bg:rgba(43,191,174,.1);
+    --grid:#1f2633; --grid-strong:#2c3546; --chart-bg:#121822; --shadow:0 18px 50px rgba(0,0,0,.45);
+    color-scheme:dark;
+  } }
+  :root[data-theme="dark"]{
+    --bg:#0e1219; --bg2:#141923; --panel:#1a202c; --line:#2d3546; --line-soft:#232a38;
+    --text:#e5e9f1; --text-dim:#a2abbe; --text-faint:#6f7a90;
+    --cyan:#2bbfae; --cyan-dim:#1c625b; --accent-hover:#35d3c1; --on-accent:#05211d;
+    --amber:#f0b45a; --violet:#a596ff; --rose:#f07a7a; --rose-bg:rgba(240,122,122,.09); --ok-bg:rgba(43,191,174,.1);
+    --grid:#1f2633; --grid-strong:#2c3546; --chart-bg:#121822; --shadow:0 18px 50px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0; background:var(--bg); color:var(--text); font:14px/1.5 var(--body); -webkit-font-smoothing:antialiased;}
+  .shell{min-height:100%; display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);}
+
+  /* ---- chart-room panel ---- */
+  .chart{position:relative; background:var(--chart-bg); border-right:1px solid var(--line-soft); overflow:hidden;
+    display:flex; flex-direction:column; justify-content:space-between; padding:40px 48px;}
+  .chart svg.grid{position:absolute; inset:0; width:100%; height:100%;}
+  .grid line{stroke:var(--grid); stroke-width:1;}
+  .grid line.eq{stroke:var(--grid-strong);}
+  .grid text{fill:var(--text-faint); font:500 10px/1 var(--body); letter-spacing:.06em;}
+  .pin{transform-box:fill-box; transform-origin:center;}
+  .pin circle.halo{fill:currentColor; opacity:.16;}
+  .pin circle.dot{fill:currentColor; stroke:var(--chart-bg); stroke-width:2;}
+  .route{fill:none; stroke:var(--text-faint); stroke-width:1.2; stroke-dasharray:4 4; opacity:.7;}
+  @media (prefers-reduced-motion: no-preference){
+    .pin circle.halo{animation:pulse 3.2s ease-out infinite;}
+    .pin:nth-of-type(2) circle.halo{animation-delay:1s} .pin:nth-of-type(3) circle.halo{animation-delay:2s}
+    @keyframes pulse{0%{transform:scale(.6); opacity:.28} 100%{transform:scale(2.2); opacity:0}}
+  }
+  .brand{position:relative; display:flex; align-items:center; gap:12px;}
+  .glyph{width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,var(--cyan),var(--violet));
+    display:grid; place-items:center; font:700 18px/1 var(--display); color:#0a0e17;}
+  .brand .nm{font:700 19px/1.1 var(--display); letter-spacing:-.01em;}
+  .brand .sub{font-size:12px; color:var(--text-dim); margin-top:2px;}
+  .pitch{position:relative; max-width:30ch;}
+  .pitch h2{font:600 clamp(24px,2.6vw,34px)/1.15 var(--display); letter-spacing:-.02em; margin:0 0 12px; text-wrap:balance;}
+  .pitch p{margin:0; color:var(--text-dim); font-size:14px;}
+  .legend{position:relative; display:flex; flex-wrap:wrap; gap:8px 18px; font-size:11.5px; color:var(--text-dim);}
+  .legend i{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle;}
+
+  /* ---- form side ---- */
+  .side{display:flex; flex-direction:column; justify-content:center; align-items:center; padding:40px 24px;}
+  .card{width:100%; max-width:400px;}
+  .eyebrow{font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--cyan); margin-bottom:8px;}
+  h1{font:700 26px/1.2 var(--display); letter-spacing:-.015em; margin:0 0 6px; text-wrap:balance;}
+  .lede{color:var(--text-dim); margin:0 0 24px;}
+  form{display:flex; flex-direction:column; gap:16px;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  label{font-size:12.5px; font-weight:600;}
+  .hint{font-size:12px; color:var(--text-faint);}
+  .inputwrap{position:relative;}
+  input{width:100%; font:inherit; font-size:15px; color:var(--text); background:var(--panel); border:1px solid var(--line);
+    border-radius:8px; padding:11px 12px; outline:none; transition:border-color .15s, box-shadow .15s;}
+  input:focus{border-color:var(--cyan); box-shadow:0 0 0 3px color-mix(in srgb, var(--cyan) 22%, transparent);}
+  input[readonly]{background:var(--bg2); color:var(--text-dim);}
+  input.code{font-family:ui-monospace,'JetBrains Mono',Consolas,monospace; letter-spacing:.12em; text-transform:uppercase;}
+  .inputwrap input{padding-right:64px;}
+  .reveal{position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:none; color:var(--text-dim);
+    font:600 12px/1 var(--body); padding:8px 8px; border-radius:6px; cursor:pointer;}
+  .reveal:hover{color:var(--text); background:var(--bg2);}
+  .checks{display:flex; flex-direction:column; gap:4px; margin-top:2px; font-size:12px; color:var(--text-faint); list-style:none; padding:0;}
+  .checks li::before{content:"○"; display:inline-block; width:16px;}
+  .checks li.ok{color:var(--cyan);} .checks li.ok::before{content:"✓";}
+  .caps{font-size:12px; color:var(--amber);}
+  .btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; font:600 14.5px/1 var(--body);
+    padding:13px 16px; border-radius:8px; border:1px solid var(--cyan); background:var(--cyan); color:var(--on-accent); cursor:pointer;
+    transition:background .15s, border-color .15s;}
+  .btn:hover{background:var(--accent-hover); border-color:var(--accent-hover);}
+  .btn:disabled{opacity:.6; cursor:progress;}
+  .btn.ghost{background:none; color:var(--text); border-color:var(--line);}
+  .btn.ghost:hover{background:var(--bg2);}
+  .spinner{width:14px; height:14px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  :focus-visible{outline:2px solid var(--cyan); outline-offset:2px;}
+  .alert{border-radius:8px; padding:11px 13px; font-size:13px; border:1px solid; display:flex; gap:10px; align-items:flex-start;}
+  .alert.err{background:var(--rose-bg); border-color:color-mix(in srgb, var(--rose) 40%, transparent); color:var(--rose);}
+  .alert.ok{background:var(--ok-bg); border-color:color-mix(in srgb, var(--cyan) 40%, transparent); color:var(--text);}
+  .alert b{font-weight:600}
+  .linkbtn{border:0; background:none; padding:0; color:var(--cyan); font:inherit; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
+  details.help{font-size:13px; color:var(--text-dim); border-top:1px solid var(--line-soft); padding-top:16px; margin-top:8px;}
+  details.help summary{cursor:pointer; color:var(--text); font-weight:600; list-style:none;}
+  details.help summary::-webkit-details-marker{display:none}
+  details.help summary::after{content:" +"; color:var(--text-faint);}
+  details.help[open] summary::after{content:" −";}
+  details.help p{margin:8px 0 0;}
+  .who{display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--panel);}
+  .who .av{width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font:700 12px/1 var(--display); color:#0a0e17; background:var(--cyan-dim); flex:none;}
+  .who .e{font-weight:600; overflow-wrap:anywhere;} .who .r{font-size:12px; color:var(--text-dim);}
+  .foot{margin-top:28px; font-size:11.5px; color:var(--text-faint); text-align:center;}
+  [hidden]{display:none!important}
+  #loading{display:flex; align-items:center; gap:10px; color:var(--text-dim);}
+
+  @media (max-width:860px){
+    .shell{grid-template-columns:1fr; grid-template-rows:auto 1fr;}
+    .chart{min-height:210px; padding:24px 20px; border-right:0; border-bottom:1px solid var(--line-soft);}
+    .pitch h2{font-size:22px;} .pitch p, .legend{display:none;}
+    .side{justify-content:flex-start; padding:28px 16px 40px;}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="chart" aria-hidden="true">
+    <svg class="grid" viewBox="0 0 600 700" preserveAspectRatio="xMidYMid slice">
+      <g id="gridlines"></g>
+      <path class="route" d="M140 300 C 230 190, 330 190, 395 250"/>
+      <path class="route" d="M395 250 C 450 300, 480 360, 505 420"/>
+      <g class="pin" style="color:var(--cyan)"><circle class="halo" cx="140" cy="300" r="10"/><circle class="dot" cx="140" cy="300" r="5"/></g>
+      <g class="pin" style="color:var(--amber)"><circle class="halo" cx="395" cy="250" r="10"/><circle class="dot" cx="395" cy="250" r="5"/></g>
+      <g class="pin" style="color:var(--violet)"><circle class="halo" cx="505" cy="420" r="10"/><circle class="dot" cx="505" cy="420" r="5"/></g>
+    </svg>
+    <div class="brand"><div class="glyph">C</div><div><div class="nm">Compass</div><div class="sub">Global Events Command Center</div></div></div>
+    <div class="pitch">
+      <h2>Every show, every traveler, one map.</h2>
+      <p>Plan trade shows, staff them, pack the booth, and track travel and results with your team.</p>
+    </div>
+    <div class="legend"><span><i style="background:var(--cyan)"></i>Confirmed</span><span><i style="background:var(--amber)"></i>Investigating</span><span><i style="background:var(--violet)"></i>Waitlist</span></div>
+  </aside>
+
+  <main class="side">
+    <div class="card">
+      <div id="loading" role="status"><span class="spinner"></span> Loading…</div>
+
+      <!-- Sign in -->
+      <section id="v-signin" hidden>
+        <div class="eyebrow">Invite-only workspace</div>
+        <h1>Sign in to Compass</h1>
+        <p class="lede">Use the email your invite was sent to.</p>
+        <form id="f-signin" novalidate>
+          <div class="alert ok" id="i-signin" hidden role="status"></div>
+          <div class="alert err" id="e-signin" hidden role="alert"></div>
+          <div class="field"><label for="si-email">Work email</label><input id="si-email" type="email" autocomplete="username" required></div>
+          <div class="field"><label for="si-pass">Password</label>
+            <div class="inputwrap"><input id="si-pass" type="password" autocomplete="current-password" required><button type="button" class="reveal" data-for="si-pass">Show</button></div>
+            <div class="caps" hidden>Caps Lock is on</div>
+          </div>
+          <button class="btn" type="submit">Sign in</button>
+        </form>
+        <p style="margin:16px 0 0;font-size:13px;"><button class="linkbtn" type="button" id="to-forgot">Forgot your password?</button></p>
+        <details class="help">
+          <summary>Got an invite?</summary>
+          <p>Open the link your Admin sent you, or <button class="linkbtn" type="button" id="to-signup">create your account here</button> with the email you were invited with.</p>
+        </details>
+      </section>
+
+      <!-- Create account (invite-only) -->
+      <section id="v-signup" hidden>
+        <div class="eyebrow">You’re invited</div>
+        <h1>Create your account</h1>
+        <p class="lede">Use the email address your invite was sent to.</p>
+        <form id="f-signup" novalidate>
+          <div class="alert err" id="e-signup" hidden role="alert"></div>
+          <div class="field"><label for="su-email">Work email</label><input id="su-email" type="email" autocomplete="username" required></div>
+          <div class="field"><label for="su-name">Your name</label><input id="su-name" autocomplete="name" required>
+            <div class="hint">This is how teammates will see you in Compass.</div></div>
+          <div class="field"><label for="su-pass">Choose a password</label>
+            <div class="inputwrap"><input id="su-pass" type="password" autocomplete="new-password" required><button type="button" class="reveal" data-for="su-pass">Show</button></div>
+            <ul class="checks" data-checks="su-pass" data-confirm="su-pass2"></ul>
+          </div>
+          <div class="field"><label for="su-pass2">Confirm password</label><input id="su-pass2" type="password" autocomplete="new-password" required></div>
+          <button class="btn" type="submit">Create account</button>
+        </form>
+        <p style="margin:16px 0 0;font-size:13px;">Already have an account? <button class="linkbtn" type="button" data-go="signin">Sign in</button></p>
+      </section>
+
+      <!-- Forgot password -->
+      <section id="v-forgot" hidden>
+        <div class="eyebrow">Password reset</div>
+        <h1>Reset your password</h1>
+        <p class="lede">We’ll email you a link to choose a new password.</p>
+        <form id="f-forgot" novalidate>
+          <div class="alert err" id="e-forgot" hidden role="alert"></div>
+          <div class="field"><label for="fg-email">Work email</label><input id="fg-email" type="email" autocomplete="username" required></div>
+          <button class="btn" type="submit">Email me a reset link</button>
+        </form>
+        <p style="margin:16px 0 0;font-size:13px;"><button class="linkbtn" type="button" data-go="signin">Back to sign in</button></p>
+      </section>
+
+      <!-- Set new password (from the emailed link) -->
+      <section id="v-recovery" hidden>
+        <div class="eyebrow">Password reset</div>
+        <h1>Choose a new password</h1>
+        <p class="lede" id="rc-lede">Saving signs you out on every other device.</p>
+        <form id="f-recovery" novalidate>
+          <div class="alert err" id="e-recovery" hidden role="alert"></div>
+          <div class="field"><label for="rc-pass">New password</label>
+            <div class="inputwrap"><input id="rc-pass" type="password" autocomplete="new-password" required><button type="button" class="reveal" data-for="rc-pass">Show</button></div>
+            <ul class="checks" data-checks="rc-pass" data-confirm="rc-pass2"></ul>
+          </div>
+          <div class="field"><label for="rc-pass2">Confirm new password</label><input id="rc-pass2" type="password" autocomplete="new-password" required></div>
+          <button class="btn" type="submit">Save password and continue</button>
+        </form>
+      </section>
+
+      <!-- Check your email -->
+      <section id="v-sent" hidden>
+        <div class="eyebrow">Check your email</div>
+        <h1 id="sent-title">Check your inbox</h1>
+        <p class="lede" id="sent-msg"></p>
+        <div class="alert ok" id="i-sent" hidden role="status"></div>
+        <button class="btn ghost" type="button" id="resend" hidden>Send the email again</button>
+        <p style="margin:16px 0 0;font-size:13px;"><button class="linkbtn" type="button" data-go="signin">Back to sign in</button></p>
+      </section>
+
+      <!-- Not set up -->
+      <section id="v-config" hidden>
+        <div class="eyebrow">Setup needed</div>
+        <h1>Compass isn’t connected yet</h1>
+        <p class="lede" id="config-msg"></p>
+      </section>
+
+      <div class="foot">Compass · Invite-only · Secured by Supabase</div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+  const $=(id)=>document.getElementById(id);
+  const params=new URLSearchParams(location.search);
+  const MIN=10;
+  const here=(f)=>new URL(f, location.href).href;
+  const appUrl=()=>{ const n=params.get('next'); return n && n.startsWith('/') && !n.startsWith('//') ? n : here('index.html'); };
+
+  (function drawGrid(){
+    const g=$('gridlines'), ns='http://www.w3.org/2000/svg', W=600, H=700;
+    const line=(x1,y1,x2,y2,cls)=>{ const l=document.createElementNS(ns,'line'); l.setAttribute('x1',x1); l.setAttribute('y1',y1); l.setAttribute('x2',x2); l.setAttribute('y2',y2); if(cls) l.setAttribute('class',cls); g.appendChild(l); };
+    for(let i=0;i<=12;i++){ const x=i*W/12; line(x,0,x,H); }
+    for(let j=0;j<=14;j++){ const y=j*H/14; line(0,y,W,y, j===7?'eq':''); }
+    const t=document.createElementNS(ns,'text'); t.setAttribute('x',8); t.setAttribute('y',H/2-6); t.textContent='0° EQUATOR'; g.appendChild(t);
+  })();
+
+  function show(view){
+    $('loading').hidden=true;
+    ['signin','signup','forgot','recovery','sent','config'].forEach(v=>$('v-'+v).hidden = v!==view);
+    const first=$('v-'+view).querySelector('input:not([readonly]):not([hidden])');
+    if(first && !first.value) setTimeout(()=>first.focus(),30);
+  }
+  document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.go)));
+
+  const cfg=window.COMPASS_CONFIG||{};
+  if(!window.supabase){ $('config-msg').textContent='The Supabase library didn’t load. Check your internet connection and reload.'; return show('config'); }
+  if(!cfg.supabaseUrl || /YOUR-PROJECT/i.test(cfg.supabaseUrl) || !cfg.supabaseKey){ $('config-msg').textContent='Open web/config.js and fill in your Supabase Project URL and publishable key, then reload.'; return show('config'); }
+  const sb=window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } });
+
+  // ---- helpers ----
+  document.querySelectorAll('.reveal').forEach(b=>b.addEventListener('click',()=>{
+    const i=$(b.dataset.for), showing=i.type==='text';
+    i.type=showing?'password':'text'; b.textContent=showing?'Show':'Hide'; b.setAttribute('aria-pressed', String(!showing)); i.focus();
+  }));
+  document.querySelectorAll('input[type=password]').forEach(i=>{
+    const caps=i.closest('.field') && i.closest('.field').querySelector('.caps');
+    if(caps) ['keydown','keyup'].forEach(ev=>i.addEventListener(ev,e=>{ if(e.getModifierState) caps.hidden=!e.getModifierState('CapsLock'); }));
+  });
+  document.querySelectorAll('.checks').forEach(ul=>{
+    const p=$(ul.dataset.checks), c=$(ul.dataset.confirm);
+    ul.innerHTML=`<li data-k="len">At least ${MIN} characters</li><li data-k="match">Both passwords match</li>`;
+    const upd=()=>{ ul.querySelector('[data-k=len]').classList.toggle('ok', p.value.length>=MIN); ul.querySelector('[data-k=match]').classList.toggle('ok', p.value.length>0 && p.value===c.value); };
+    p.addEventListener('input',upd); c.addEventListener('input',upd); upd();
+  });
+  function pwProblem(pId,cId){ const p=$(pId).value, c=$(cId).value; if(p.length<MIN) return {msg:`Use at least ${MIN} characters for your password.`, el:pId}; if(p!==c) return {msg:'The two passwords don’t match.', el:cId}; return null; }
+  function busy(form,on,label){ const b=form.querySelector('button[type=submit]'); if(on){ b.dataset.label=b.textContent; b.disabled=true; b.innerHTML=`<span class="spinner"></span> ${label||'Working…'}`; } else { b.disabled=false; b.textContent=b.dataset.label||b.textContent; } }
+  function err(box,msg,focusId){ const e=$(box); e.textContent=msg||''; e.hidden=!msg; if(focusId) $(focusId).focus(); }
+  function info(box,msg){ const e=$(box); e.textContent=msg||''; e.hidden=!msg; }
+  const validEmail=(e)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  function friendly(e){
+    const m=(e && e.message)||'Something went wrong. Try again.';
+    if(/Invalid login credentials/i.test(m)) return 'That email and password don’t match. Check them and try again.';
+    if(/Email not confirmed/i.test(m)) return 'Confirm your email first. Open the link we emailed you when you created your account.';
+    if(/rate limit|too many/i.test(m)) return 'Too many attempts. Wait a few minutes and try again.';
+    if(/invite-only|Database error saving new user/i.test(m)) return 'Compass is invite-only and this email hasn’t been invited. Ask a Compass Admin to invite you.';
+    if(/Password should be/i.test(m)) return m.replace('Password should be','Your password should be');
+    return m;
+  }
+  let sentMode=null, sentEmail='';
+  function showSent(title,msg,mode,email){ $('sent-title').textContent=title; $('sent-msg').textContent=msg; sentMode=mode; sentEmail=email; $('resend').hidden=!mode; info('i-sent',''); show('sent'); }
+  $('resend').addEventListener('click', async ()=>{
+    const b=$('resend'); b.disabled=true;
+    const r = sentMode==='signup' ? await sb.auth.resend({type:'signup', email:sentEmail, options:{emailRedirectTo:here('login.html')}})
+                                  : await sb.auth.resetPasswordForEmail(sentEmail,{redirectTo:here('login.html')});
+    b.disabled=false; info('i-sent', r.error ? friendly(r.error) : 'Sent again. It can take a minute to arrive. Check your spam folder too.');
+  });
+
+  // ---- sign in ----
+  $('f-signin').addEventListener('submit', async ev=>{
+    ev.preventDefault(); const f=ev.currentTarget; info('i-signin','');
+    const email=$('si-email').value.trim().toLowerCase(), password=$('si-pass').value;
+    if(!validEmail(email)) return err('e-signin','Enter your work email.','si-email');
+    if(!password) return err('e-signin','Enter your password.','si-pass');
+    err('e-signin',''); busy(f,true,'Signing in…');
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){ busy(f,false); return err('e-signin', friendly(error), 'si-pass'); }
+    location.replace(appUrl());
+  });
+  $('to-forgot').addEventListener('click',()=>{ $('fg-email').value=$('si-email').value; show('forgot'); });
+  $('to-signup').addEventListener('click',()=>{ $('su-email').value=$('si-email').value; show('signup'); });
+
+  // ---- create account (invite-only) ----
+  $('f-signup').addEventListener('submit', async ev=>{
+    ev.preventDefault(); const f=ev.currentTarget;
+    const email=$('su-email').value.trim().toLowerCase(), name=$('su-name').value.trim();
+    if(!validEmail(email)) return err('e-signup','Enter the email address your invite was sent to.','su-email');
+    if(!name) return err('e-signup','Enter your name.','su-name');
+    const pv=pwProblem('su-pass','su-pass2'); if(pv) return err('e-signup',pv.msg,pv.el);
+    err('e-signup',''); busy(f,true,'Checking your invite…');
+    const st = await sb.rpc('invite_status', { p_email: email });
+    const status = st.error ? 'invited' : st.data;   // if the check fails, let Supabase decide
+    if(status==='has_account'){ busy(f,false); $('si-email').value=email; show('signin'); return info('i-signin','You already have an account. Sign in with your password, or reset it if you’ve forgotten it.'); }
+    if(status==='none'){ busy(f,false); return err('e-signup','This email hasn’t been invited to Compass. Check the spelling, or ask a Compass Admin to invite you.','su-email'); }
+    if(status==='expired'){ busy(f,false); return err('e-signup','Your invite has expired. Ask a Compass Admin to send a new one.'); }
+    busy(f,false); busy(f,true,'Creating account…');
+    const { data, error } = await sb.auth.signUp({ email, password:$('su-pass').value, options:{ data:{ name }, emailRedirectTo: here('login.html') } });
+    if(error){ busy(f,false); return err('e-signup', friendly(error)); }
+    if(data.session){ location.replace(appUrl()); return; }
+    busy(f,false);
+    showSent('Confirm your email', `We sent a confirmation link to ${email}. Open it on this device to finish creating your account.`, 'signup', email);
+  });
+
+  // ---- forgot password ----
+  $('f-forgot').addEventListener('submit', async ev=>{
+    ev.preventDefault(); const f=ev.currentTarget;
+    const email=$('fg-email').value.trim().toLowerCase();
+    if(!validEmail(email)) return err('e-forgot','Enter your work email.','fg-email');
+    err('e-forgot',''); busy(f,true,'Sending…');
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: here('login.html') });
+    busy(f,false);
+    if(error) return err('e-forgot', friendly(error));
+    showSent('Check your inbox', `If ${email} has a Compass account, we’ve sent it a link to choose a new password. The link works once.`, 'reset', email);
+  });
+
+  // ---- set new password (after following the emailed link) ----
+  $('f-recovery').addEventListener('submit', async ev=>{
+    ev.preventDefault(); const f=ev.currentTarget;
+    const pv=pwProblem('rc-pass','rc-pass2'); if(pv) return err('e-recovery',pv.msg,pv.el);
+    err('e-recovery',''); busy(f,true,'Saving…');
+    const { error } = await sb.auth.updateUser({ password:$('rc-pass').value });
+    if(error){ busy(f,false); return err('e-recovery', friendly(error)); }
+    await sb.auth.signOut({ scope:'others' }).catch(()=>{});
+    location.replace(here('index.html'));
+  });
+
+  // ---- decide what to show ----
+  let recovering=false;
+  sb.auth.onAuthStateChange((event)=>{ if(event==='PASSWORD_RECOVERY'){ recovering=true; show('recovery'); } });
+  (async function boot(){
+    const hash=new URLSearchParams(location.hash.slice(1));
+    if(hash.get('error_description')){ history.replaceState(null,'',location.pathname); show('signin'); return err('e-signin', hash.get('error_description').replace(/\+/g,' ')+'. Request a new link and try again.'); }
+    if(hash.get('type')==='recovery'){ recovering=true; }
+    const { data:{ session } } = await sb.auth.getSession();
+    if(recovering){ history.replaceState(null,'',location.pathname); return show('recovery'); }
+    if(params.get('invite')){
+      $('su-email').value=params.get('invite');
+      if(session) await sb.auth.signOut();
+      return show('signup');
+    }
+    if(session && !params.get('signedout') && !params.get('disabled') && !params.get('noaccess')) return location.replace(appUrl());
+    if(params.get('signedout')) info('i-signin','You’ve been signed out.');
+    if(params.get('disabled')) err('e-signin','This account has been turned off. Ask a Compass Admin to turn it back on.');
+    if(params.get('noaccess')) err('e-signin','This sign-in doesn’t have a Compass account. Ask a Compass Admin to invite you.');
+    show('signin');
+  })();
+})();
+</script>
+</body>
+</html>
