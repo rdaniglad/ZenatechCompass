@@ -4,7 +4,7 @@
    NEVER put the service_role / secret key here. */
 window.COMPASS_CONFIG = {
   // Supabase Dashboard → Project Settings → API (or "Connect") → Project URL
-  supabaseUrl: 'https://YOUR-PROJECT-REF.supabase.co',
+  supabaseUrl: 'https://punsnbirawomuoeyaxty.supabase.co',
 
   // Publishable key (sb_publishable_…) — or the legacy "anon public" key
   supabaseKey: 'sb_publishable_oVdykmbWh5cS-gYMcU9gTg_1J9LbGqw',
