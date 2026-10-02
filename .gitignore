@@ -1,0 +1,8 @@
+# Live data: accounts (password hashes), sessions, events, uploaded photos, backups
+data/
+# Local settings / API keys
+.env
+node_modules/
+*.log
+.DS_Store
+Thumbs.db

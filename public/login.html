@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<title>Sign in · Compass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Same tokens as the Compass app, so sign-in feels like the front door of the same product.
+     Layout: a chart-room panel (graticule + event pins) beside a single focused form; stacks on phones. */
+  :root{
+    --bg:#f5f7fb; --bg2:#eaeef5; --panel:#ffffff; --line:#d8dee8; --line-soft:#e4e8f0;
+    --text:#161c2b; --text-dim:#5a6478; --text-faint:#8a93a6;
+    --cyan:#0e9488; --cyan-dim:#87d3c9; --accent-hover:#0b7d72; --on-accent:#ffffff;
+    --amber:#b5720f; --violet:#7256e0; --rose:#d64545; --rose-bg:rgba(214,69,69,.07); --ok-bg:rgba(14,148,136,.08);
+    --grid:#d3dae6; --grid-strong:#b9c3d4; --chart-bg:#eaeef5;
+    --shadow:0 18px 50px rgba(30,40,60,.10);
+    --display:'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+    --body:'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+    --bg:#0e1219; --bg2:#141923; --panel:#1a202c; --line:#2d3546; --line-soft:#232a38;
+    --text:#e5e9f1; --text-dim:#a2abbe; --text-faint:#6f7a90;
+    --cyan:#2bbfae; --cyan-dim:#1c625b; --accent-hover:#35d3c1; --on-accent:#05211d;
+    --amber:#f0b45a; --violet:#a596ff; --rose:#f07a7a; --rose-bg:rgba(240,122,122,.09); --ok-bg:rgba(43,191,174,.1);
+    --grid:#1f2633; --grid-strong:#2c3546; --chart-bg:#121822; --shadow:0 18px 50px rgba(0,0,0,.45);
+    color-scheme:dark;
+  } }
+  :root[data-theme="dark"]{
+    --bg:#0e1219; --bg2:#141923; --panel:#1a202c; --line:#2d3546; --line-soft:#232a38;
+    --text:#e5e9f1; --text-dim:#a2abbe; --text-faint:#6f7a90;
+    --cyan:#2bbfae; --cyan-dim:#1c625b; --accent-hover:#35d3c1; --on-accent:#05211d;
+    --amber:#f0b45a; --violet:#a596ff; --rose:#f07a7a; --rose-bg:rgba(240,122,122,.09); --ok-bg:rgba(43,191,174,.1);
+    --grid:#1f2633; --grid-strong:#2c3546; --chart-bg:#121822; --shadow:0 18px 50px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0; background:var(--bg); color:var(--text); font:14px/1.5 var(--body); -webkit-font-smoothing:antialiased;}
+  .shell{min-height:100%; display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);}
+
+  /* ---- chart-room panel ---- */
+  .chart{position:relative; background:var(--chart-bg); border-right:1px solid var(--line-soft); overflow:hidden;
+    display:flex; flex-direction:column; justify-content:space-between; padding:40px 48px;}
+  .chart svg.grid{position:absolute; inset:0; width:100%; height:100%;}
+  .grid line{stroke:var(--grid); stroke-width:1;}
+  .grid line.eq{stroke:var(--grid-strong);}
+  .grid text{fill:var(--text-faint); font:500 10px/1 var(--body); letter-spacing:.06em;}
+  .pin{transform-box:fill-box; transform-origin:center;}
+  .pin circle.halo{fill:currentColor; opacity:.16;}
+  .pin circle.dot{fill:currentColor; stroke:var(--chart-bg); stroke-width:2;}
+  .route{fill:none; stroke:var(--text-faint); stroke-width:1.2; stroke-dasharray:4 4; opacity:.7;}
+  @media (prefers-reduced-motion: no-preference){
+    .pin circle.halo{animation:pulse 3.2s ease-out infinite;}
+    .pin:nth-of-type(2) circle.halo{animation-delay:1s} .pin:nth-of-type(3) circle.halo{animation-delay:2s}
+    @keyframes pulse{0%{transform:scale(.6); opacity:.28} 100%{transform:scale(2.2); opacity:0}}
+  }
+  .brand{position:relative; display:flex; align-items:center; gap:12px;}
+  .glyph{width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,var(--cyan),var(--violet));
+    display:grid; place-items:center; font:700 18px/1 var(--display); color:#0a0e17;}
+  .brand .nm{font:700 19px/1.1 var(--display); letter-spacing:-.01em;}
+  .brand .sub{font-size:12px; color:var(--text-dim); margin-top:2px;}
+  .pitch{position:relative; max-width:30ch;}
+  .pitch h2{font:600 clamp(24px,2.6vw,34px)/1.15 var(--display); letter-spacing:-.02em; margin:0 0 12px; text-wrap:balance;}
+  .pitch p{margin:0; color:var(--text-dim); font-size:14px;}
+  .legend{position:relative; display:flex; flex-wrap:wrap; gap:8px 18px; font-size:11.5px; color:var(--text-dim);}
+  .legend i{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle;}
+
+  /* ---- form side ---- */
+  .side{display:flex; flex-direction:column; justify-content:center; align-items:center; padding:40px 24px;}
+  .card{width:100%; max-width:400px;}
+  .eyebrow{font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--cyan); margin-bottom:8px;}
+  h1{font:700 26px/1.2 var(--display); letter-spacing:-.015em; margin:0 0 6px; text-wrap:balance;}
+  .lede{color:var(--text-dim); margin:0 0 24px;}
+  form{display:flex; flex-direction:column; gap:16px;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  label{font-size:12.5px; font-weight:600;}
+  .hint{font-size:12px; color:var(--text-faint);}
+  .inputwrap{position:relative;}
+  input{width:100%; font:inherit; font-size:15px; color:var(--text); background:var(--panel); border:1px solid var(--line);
+    border-radius:8px; padding:11px 12px; outline:none; transition:border-color .15s, box-shadow .15s;}
+  input:focus{border-color:var(--cyan); box-shadow:0 0 0 3px color-mix(in srgb, var(--cyan) 22%, transparent);}
+  input[readonly]{background:var(--bg2); color:var(--text-dim);}
+  input.code{font-family:ui-monospace,'JetBrains Mono',Consolas,monospace; letter-spacing:.12em; text-transform:uppercase;}
+  .inputwrap input{padding-right:64px;}
+  .reveal{position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:none; color:var(--text-dim);
+    font:600 12px/1 var(--body); padding:8px 8px; border-radius:6px; cursor:pointer;}
+  .reveal:hover{color:var(--text); background:var(--bg2);}
+  .checks{display:flex; flex-direction:column; gap:4px; margin-top:2px; font-size:12px; color:var(--text-faint); list-style:none; padding:0;}
+  .checks li::before{content:"○"; display:inline-block; width:16px;}
+  .checks li.ok{color:var(--cyan);} .checks li.ok::before{content:"✓";}
+  .caps{font-size:12px; color:var(--amber);}
+  .btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; font:600 14.5px/1 var(--body);
+    padding:13px 16px; border-radius:8px; border:1px solid var(--cyan); background:var(--cyan); color:var(--on-accent); cursor:pointer;
+    transition:background .15s, border-color .15s;}
+  .btn:hover{background:var(--accent-hover); border-color:var(--accent-hover);}
+  .btn:disabled{opacity:.6; cursor:progress;}
+  .btn.ghost{background:none; color:var(--text); border-color:var(--line);}
+  .btn.ghost:hover{background:var(--bg2);}
+  .spinner{width:14px; height:14px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  :focus-visible{outline:2px solid var(--cyan); outline-offset:2px;}
+  .alert{border-radius:8px; padding:11px 13px; font-size:13px; border:1px solid; display:flex; gap:10px; align-items:flex-start;}
+  .alert.err{background:var(--rose-bg); border-color:color-mix(in srgb, var(--rose) 40%, transparent); color:var(--rose);}
+  .alert.ok{background:var(--ok-bg); border-color:color-mix(in srgb, var(--cyan) 40%, transparent); color:var(--text);}
+  .alert b{font-weight:600}
+  .linkbtn{border:0; background:none; padding:0; color:var(--cyan); font:inherit; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
+  details.help{font-size:13px; color:var(--text-dim); border-top:1px solid var(--line-soft); padding-top:16px; margin-top:8px;}
+  details.help summary{cursor:pointer; color:var(--text); font-weight:600; list-style:none;}
+  details.help summary::-webkit-details-marker{display:none}
+  details.help summary::after{content:" +"; color:var(--text-faint);}
+  details.help[open] summary::after{content:" −";}
+  details.help p{margin:8px 0 0;}
+  .who{display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--panel);}
+  .who .av{width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font:700 12px/1 var(--display); color:#0a0e17; background:var(--cyan-dim); flex:none;}
+  .who .e{font-weight:600; overflow-wrap:anywhere;} .who .r{font-size:12px; color:var(--text-dim);}
+  .foot{margin-top:28px; font-size:11.5px; color:var(--text-faint); text-align:center;}
+  [hidden]{display:none!important}
+  #loading{display:flex; align-items:center; gap:10px; color:var(--text-dim);}
+
+  @media (max-width:860px){
+    .shell{grid-template-columns:1fr; grid-template-rows:auto 1fr;}
+    .chart{min-height:210px; padding:24px 20px; border-right:0; border-bottom:1px solid var(--line-soft);}
+    .pitch h2{font-size:22px;} .pitch p, .legend{display:none;}
+    .side{justify-content:flex-start; padding:28px 16px 40px;}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="chart" aria-hidden="true">
+    <svg class="grid" viewBox="0 0 600 700" preserveAspectRatio="xMidYMid slice">
+      <g id="gridlines"></g>
+      <path class="route" d="M140 300 C 230 190, 330 190, 395 250"/>
+      <path class="route" d="M395 250 C 450 300, 480 360, 505 420"/>
+      <g class="pin" style="color:var(--cyan)"><circle class="halo" cx="140" cy="300" r="10"/><circle class="dot" cx="140" cy="300" r="5"/></g>
+      <g class="pin" style="color:var(--amber)"><circle class="halo" cx="395" cy="250" r="10"/><circle class="dot" cx="395" cy="250" r="5"/></g>
+      <g class="pin" style="color:var(--violet)"><circle class="halo" cx="505" cy="420" r="10"/><circle class="dot" cx="505" cy="420" r="5"/></g>
+    </svg>
+    <div class="brand"><div class="glyph">C</div><div><div class="nm">Compass</div><div class="sub">Global Events Command Center</div></div></div>
+    <div class="pitch">
+      <h2>Every show, every traveler, one map.</h2>
+      <p>Plan trade shows, staff them, pack the booth, and track travel and results with your team.</p>
+    </div>
+    <div class="legend"><span><i style="background:var(--cyan)"></i>Confirmed</span><span><i style="background:var(--amber)"></i>Investigating</span><span><i style="background:var(--violet)"></i>Waitlist</span></div>
+  </aside>
+
+  <main class="side">
+    <div class="card">
+      <div id="loading" role="status"><span class="spinner"></span> Loading…</div>
+
+      <!-- Sign in -->
+      <section id="v-signin" hidden>
+        <div class="eyebrow">Invite-only workspace</div>
+        <h1>Sign in to Compass</h1>
+        <p class="lede">Use the email your invite was sent to.</p>
+        <form id="f-signin" novalidate>
+          <div class="alert ok" id="signedout" hidden role="status">You’ve been signed out.</div>
+          <div class="alert err" id="e-signin" hidden role="alert"></div>
+          <div class="field"><label for="si-email">Work email</label><input id="si-email" type="email" autocomplete="username" required></div>
+          <div class="field"><label for="si-pass">Password</label>
+            <div class="inputwrap"><input id="si-pass" type="password" autocomplete="current-password" required><button type="button" class="reveal" data-for="si-pass">Show</button></div>
+            <div class="caps" hidden>Caps Lock is on</div>
+          </div>
+          <button class="btn" type="submit">Sign in</button>
+        </form>
+        <details class="help">
+          <summary>Forgot your password?</summary>
+          <p>Ask a Compass Admin to send you a password reset link. They can create one from the <b>Permissions</b> page. The link works once and expires after 24 hours.</p>
+        </details>
+        <details class="help">
+          <summary>Don’t have an account?</summary>
+          <p>Compass is invite-only. Ask a Compass Admin to invite you, then open the link they send you to create your account.</p>
+        </details>
+      </section>
+
+      <!-- First run -->
+      <section id="v-setup" hidden>
+        <div class="eyebrow">First-time setup</div>
+        <h1>Create the owner account</h1>
+        <p class="lede">You’ll be Compass’s first Admin. After this, people can only join by invite.</p>
+        <form id="f-setup" novalidate>
+          <div class="alert err" id="e-setup" hidden role="alert"></div>
+          <div class="field"><label for="su-code">Setup code</label><input id="su-code" class="code" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX" required>
+            <div class="hint">Shown in the window where the Compass server is running.</div></div>
+          <div class="field"><label for="su-name">Your name</label><input id="su-name" autocomplete="name" required></div>
+          <div class="field"><label for="su-email">Work email</label><input id="su-email" type="email" autocomplete="username" required></div>
+          <div class="field"><label for="su-pass">Password</label>
+            <div class="inputwrap"><input id="su-pass" type="password" autocomplete="new-password" required><button type="button" class="reveal" data-for="su-pass">Show</button></div>
+            <ul class="checks" data-checks="su-pass" data-confirm="su-pass2"></ul>
+          </div>
+          <div class="field"><label for="su-pass2">Confirm password</label><input id="su-pass2" type="password" autocomplete="new-password" required></div>
+          <button class="btn" type="submit">Create owner account</button>
+        </form>
+      </section>
+
+      <!-- Accept invite -->
+      <section id="v-invite" hidden>
+        <div class="eyebrow">You’re invited</div>
+        <h1>Create your account</h1>
+        <p class="lede" id="inv-lede"></p>
+        <form id="f-invite" novalidate>
+          <div class="alert err" id="e-invite" hidden role="alert"></div>
+          <div class="who"><div class="av" id="inv-av"></div><div><div class="e" id="inv-email"></div><div class="r" id="inv-role"></div></div></div>
+          <input type="email" id="inv-username" autocomplete="username" hidden>
+          <div class="field"><label for="inv-name">Your name</label><input id="inv-name" autocomplete="name" required>
+            <div class="hint">This is how teammates will see you in Compass.</div></div>
+          <div class="field"><label for="inv-pass">Choose a password</label>
+            <div class="inputwrap"><input id="inv-pass" type="password" autocomplete="new-password" required><button type="button" class="reveal" data-for="inv-pass">Show</button></div>
+            <ul class="checks" data-checks="inv-pass" data-confirm="inv-pass2"></ul>
+          </div>
+          <div class="field"><label for="inv-pass2">Confirm password</label><input id="inv-pass2" type="password" autocomplete="new-password" required></div>
+          <button class="btn" type="submit">Create account</button>
+        </form>
+      </section>
+
+      <!-- Reset password -->
+      <section id="v-reset" hidden>
+        <div class="eyebrow">Password reset</div>
+        <h1>Choose a new password</h1>
+        <p class="lede">Saving signs you out on every other device.</p>
+        <form id="f-reset" novalidate>
+          <div class="alert err" id="e-reset" hidden role="alert"></div>
+          <div class="who"><div class="av" id="rs-av"></div><div><div class="e" id="rs-email"></div><div class="r" id="rs-name"></div></div></div>
+          <input type="email" id="rs-username" autocomplete="username" hidden>
+          <div class="field"><label for="rs-pass">New password</label>
+            <div class="inputwrap"><input id="rs-pass" type="password" autocomplete="new-password" required><button type="button" class="reveal" data-for="rs-pass">Show</button></div>
+            <ul class="checks" data-checks="rs-pass" data-confirm="rs-pass2"></ul>
+          </div>
+          <div class="field"><label for="rs-pass2">Confirm new password</label><input id="rs-pass2" type="password" autocomplete="new-password" required></div>
+          <button class="btn" type="submit">Save password and sign in</button>
+        </form>
+      </section>
+
+      <!-- Bad / expired link -->
+      <section id="v-badlink" hidden>
+        <div class="eyebrow" id="bad-eyebrow">Link problem</div>
+        <h1 id="bad-title">This link doesn’t work</h1>
+        <p class="lede" id="bad-msg"></p>
+        <button class="btn ghost" type="button" id="to-signin">Go to sign in</button>
+      </section>
+
+      <div class="foot">Compass · Signed-in sessions last 30 days on this device</div>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  const $=(id)=>document.getElementById(id);
+  const params=new URLSearchParams(location.search);
+  let MIN=10;
+
+  // Graticule for the chart panel: meridians and parallels every 15°, equator emphasised
+  (function drawGrid(){
+    const g=$('gridlines'), ns='http://www.w3.org/2000/svg', W=600, H=700;
+    const line=(x1,y1,x2,y2,cls)=>{ const l=document.createElementNS(ns,'line'); l.setAttribute('x1',x1); l.setAttribute('y1',y1); l.setAttribute('x2',x2); l.setAttribute('y2',y2); if(cls) l.setAttribute('class',cls); g.appendChild(l); };
+    for(let i=0;i<=12;i++){ const x=i*W/12; line(x,0,x,H); }
+    for(let j=0;j<=14;j++){ const y=j*H/14; line(0,y,W,y, j===7?'eq':''); }
+    const t=document.createElementNS(ns,'text'); t.setAttribute('x',8); t.setAttribute('y',H/2-6); t.textContent='0° EQUATOR'; g.appendChild(t);
+  })();
+
+  function show(view){
+    $('loading').hidden=true;
+    ['signin','setup','invite','reset','badlink'].forEach(v=>$('v-'+v).hidden = v!==view);
+    const first=$('v-'+view).querySelector('input:not([readonly]):not([hidden])');
+    if(first) setTimeout(()=>first.focus(),30);
+  }
+  function initials(s){ const p=String(s||'?').trim().split(/[\s@._-]+/).filter(Boolean); return ((p[0]||'?')[0]+((p[1]||'')[0]||'')).toUpperCase(); }
+  const roleLabel={admin:'Admin',manager:'Manager',attendee:'Attendee'};
+  const roleDesc={admin:'Full access, including people and permissions',manager:'Plan, staff and pack events',attendee:'See your conferences, travel and feedback'};
+
+  async function api(path, opts){
+    opts=opts||{};
+    const res=await fetch(path,{method:opts.method||'GET', headers:Object.assign({'x-compass':'1'}, opts.body?{'Content-Type':'application/json'}:{}), body:opts.body?JSON.stringify(opts.body):undefined, credentials:'same-origin'});
+    let data={}; try{ data=await res.json(); }catch(e){}
+    if(!res.ok){ const err=new Error(data.error||('Something went wrong ('+res.status+'). Try again.')); err.status=res.status; throw err; }
+    return data;
+  }
+  function next(){ const n=params.get('next'); return n && n.startsWith('/') && !n.startsWith('//') ? n : '/'; }
+  function done(){ location.replace(next()); }
+
+  // ---- password helpers ----
+  document.querySelectorAll('.reveal').forEach(b=>b.addEventListener('click',()=>{
+    const i=$(b.dataset.for), showing=i.type==='text';
+    i.type=showing?'password':'text'; b.textContent=showing?'Show':'Hide'; b.setAttribute('aria-pressed', String(!showing)); i.focus();
+  }));
+  document.querySelectorAll('input[type=password]').forEach(i=>{
+    const caps=i.closest('.field') && i.closest('.field').querySelector('.caps');
+    if(caps) ['keydown','keyup'].forEach(ev=>i.addEventListener(ev,e=>{ if(e.getModifierState) caps.hidden=!e.getModifierState('CapsLock'); }));
+  });
+  function wireChecks(){
+    document.querySelectorAll('.checks').forEach(ul=>{
+      const p=$(ul.dataset.checks), c=$(ul.dataset.confirm);
+      ul.innerHTML=`<li data-k="len">At least ${MIN} characters</li><li data-k="match">Both passwords match</li>`;
+      const upd=()=>{
+        ul.querySelector('[data-k=len]').classList.toggle('ok', p.value.length>=MIN);
+        ul.querySelector('[data-k=match]').classList.toggle('ok', p.value.length>0 && p.value===c.value);
+      };
+      p.addEventListener('input',upd); c.addEventListener('input',upd); upd();
+    });
+  }
+  function validatePasswords(pId, cId){
+    const p=$(pId).value, c=$(cId).value;
+    if(p.length<MIN) return {msg:`Use at least ${MIN} characters for your password.`, el:pId};
+    if(p!==c) return {msg:'The two passwords don’t match.', el:cId};
+    return null;
+  }
+  function busy(form, on, label){
+    const b=form.querySelector('button[type=submit]');
+    if(on){ b.dataset.label=b.textContent; b.disabled=true; b.innerHTML=`<span class="spinner"></span> ${label||'Working…'}`; }
+    else { b.disabled=false; b.textContent=b.dataset.label||b.textContent; }
+  }
+  function err(box, msg, focusId){ const e=$(box); e.textContent=msg; e.hidden=!msg; if(focusId){ $(focusId).focus(); } }
+
+  // ---- sign in ----
+  $('f-signin').addEventListener('submit', async ev=>{
+    ev.preventDefault(); const f=ev.currentTarget; $('signedout').hidden=true;
+    const email=$('si-email').value.trim(), password=$('si-pass').value;
+    if(!email) return err('e-signin','Enter your work email.','si-email');
+    if(!password) return err('e-signin','Enter your password.','si-pass');
+    err('e-signin',''); busy(f,true,'Signing in…');
+    try{ await api('/api/auth/login',{method:'POST', body:{email,password}}); done(); }
+    catch(e){ busy(f,false); err('e-signin', e.message, 'si-pass'); $('si-pass').select(); }
+  });
+
+  // ---- first-run setup ----
+  $('f-setup').addEventListener('submit', async ev=>{
+    ev.preventDefault(); const f=ev.currentTarget;
+    const setupCode=$('su-code').value.trim(), name=$('su-name').value.trim(), email=$('su-email').value.trim();
+    if(!setupCode) return err('e-setup','Enter the setup code from the server window.','su-code');
+    if(!name) return err('e-setup','Enter your name.','su-name');
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('e-setup','Enter a valid email address.','su-email');
+    const pv=validatePasswords('su-pass','su-pass2'); if(pv) return err('e-setup',pv.msg,pv.el);
+    err('e-setup',''); busy(f,true,'Creating account…');
+    try{ await api('/api/auth/setup',{method:'POST', body:{setupCode,name,email,password:$('su-pass').value}}); done(); }
+    catch(e){ busy(f,false); err('e-setup', e.message); }
+  });
+
+  // ---- accept invite ----
+  $('f-invite').addEventListener('submit', async ev=>{
+    ev.preventDefault(); const f=ev.currentTarget;
+    const name=$('inv-name').value.trim();
+    if(!name) return err('e-invite','Enter your name.','inv-name');
+    const pv=validatePasswords('inv-pass','inv-pass2'); if(pv) return err('e-invite',pv.msg,pv.el);
+    err('e-invite',''); busy(f,true,'Creating account…');
+    try{ await api('/api/auth/accept',{method:'POST', body:{code:params.get('invite'), name, password:$('inv-pass').value}}); history.replaceState(null,'','/login'); done(); }
+    catch(e){ busy(f,false); if(e.status===410||e.status===409||e.status===404) badLink('Invite', e.message); else err('e-invite', e.message); }
+  });
+
+  // ---- reset password ----
+  $('f-reset').addEventListener('submit', async ev=>{
+    ev.preventDefault(); const f=ev.currentTarget;
+    const pv=validatePasswords('rs-pass','rs-pass2'); if(pv) return err('e-reset',pv.msg,pv.el);
+    err('e-reset',''); busy(f,true,'Saving…');
+    try{ await api('/api/auth/reset',{method:'POST', body:{code:params.get('reset'), password:$('rs-pass').value}}); history.replaceState(null,'','/login'); done(); }
+    catch(e){ busy(f,false); if(e.status===410||e.status===404) badLink('Reset', e.message); else err('e-reset', e.message); }
+  });
+
+  function badLink(kind, msg){
+    $('bad-eyebrow').textContent = kind==='Invite' ? 'Invite link' : 'Password reset link';
+    $('bad-title').textContent = kind==='Invite' ? 'This invite can’t be used' : 'This reset link can’t be used';
+    $('bad-msg').textContent = msg;
+    history.replaceState(null,'','/login');
+    show('badlink');
+  }
+  $('to-signin').addEventListener('click', ()=>show('signin'));
+
+  // ---- decide what to show ----
+  (async function boot(){
+    let state={setupNeeded:false,user:null};
+    try{ state=await api('/api/auth/state'); }catch(e){ /* show sign-in; the submit will report the problem */ }
+    if(state.minPassword) MIN=state.minPassword;
+    wireChecks();
+    const inviteCode=params.get('invite'), resetCode=params.get('reset');
+    if(state.setupNeeded) return show('setup');
+    if(inviteCode){
+      try{
+        const inv=await api('/api/auth/invite?code='+encodeURIComponent(inviteCode));
+        $('inv-lede').textContent = `${inv.invitedBy} invited you to Compass. Set your name and a password to finish.`;
+        $('inv-email').textContent=inv.email; $('inv-username').value=inv.email;
+        $('inv-role').textContent=`${roleLabel[inv.role]||'Attendee'} · ${roleDesc[inv.role]||roleDesc.attendee}`;
+        $('inv-av').textContent=initials(inv.name||inv.email);
+        $('inv-name').value=inv.name||'';
+        return show('invite');
+      }catch(e){ return badLink('Invite', e.message); }
+    }
+    if(resetCode){
+      try{
+        const r=await api('/api/auth/reset?code='+encodeURIComponent(resetCode));
+        $('rs-email').textContent=r.email; $('rs-username').value=r.email; $('rs-name').textContent=r.name||'';
+        $('rs-av').textContent=initials(r.name||r.email);
+        return show('reset');
+      }catch(e){ return badLink('Reset', e.message); }
+    }
+    if(state.user) return done();
+    if(params.get('signedout')) $('signedout').hidden=false;
+    show('signin');
+  })();
+})();
+</script>
+</body>
+</html>
