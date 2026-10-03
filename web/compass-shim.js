@@ -154,6 +154,9 @@
         const rows = await run(sb.from('profiles').select('id,name,email').in('id', ids));
         const out = {}; rows.forEach((p) => { out[p.id] = { name: p.name || '', email: p.email }; }); return out;
       },
+      // Activity email preference (account emails like password resets always send)
+      async getEmailAlerts() { const { user } = await state(); const p = await run(sb.from('profiles').select('email_notifications').eq('id', user.id).single()); return p.email_notifications !== false; },
+      async setEmailAlerts(on) { const { user } = await state(); await run(sb.from('profiles').update({ email_notifications: !!on }).eq('id', user.id)); return !!on; },
       async signOut() { leaving = true; await sb.auth.signOut(); go(here('login.html') + '?signedout=1'); },
       async changePassword(current, next) {
         const { user } = await state();
@@ -164,6 +167,7 @@
         await sb.auth.signOut({ scope: 'others' }).catch(() => {});
       },
       accounts: {
+        emailsInvites: true, // the database emails invites automatically (supabase/notifications.sql)
         async list() {
           const [profiles, invites] = await Promise.all([
             run(sb.from('profiles').select('*').order('joined_at')),

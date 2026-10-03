@@ -1337,8 +1337,16 @@ function renderShell(){
   const acct=document.getElementById('acctlinks');
   if(claudeUser && typeof claudeUser.signOut==='function' && !IMPERSONATING){
     acct.hidden=false;
-    acct.innerHTML=`<button type="button" id="acct-pass">Change password</button><span aria-hidden="true">·</span><button type="button" id="acct-out">Sign out</button>`;
+    const alerts = typeof claudeUser.getEmailAlerts==='function';
+    acct.innerHTML=`<button type="button" id="acct-pass">Change password</button><span aria-hidden="true">·</span><button type="button" id="acct-out">Sign out</button>${alerts?'<span aria-hidden="true">·</span><button type="button" id="acct-alerts" aria-pressed="true" title="Emails about events you\u2019re on, reminders and role changes">Email alerts: …</button>':''}`;
+    acct.style.flexWrap='wrap';
     document.getElementById('acct-pass').onclick=openChangePasswordModal;
+    if(alerts){
+      const b=document.getElementById('acct-alerts');
+      const show=(on)=>{ b.textContent='Email alerts: '+(on?'On':'Off'); b.setAttribute('aria-pressed', String(on)); b.dataset.on=on?'1':''; };
+      claudeUser.getEmailAlerts().then(show).catch(()=>{ b.remove(); });
+      b.onclick=async ()=>{ const next=!b.dataset.on; try{ show(await claudeUser.setEmailAlerts(next)); toast(next?'Email alerts on: you\u2019ll get emails about your events and reminders':'Email alerts off. Account emails like password resets still arrive.','ok'); }catch(e){ toast(e.message||'Couldn\u2019t change email alerts','err'); } };
+    }
     document.getElementById('acct-out').onclick=()=>claudeUser.signOut();
   } else { acct.hidden=true; acct.innerHTML=''; }
 
@@ -3714,12 +3722,12 @@ async function loadAccounts(){
   try{ ACCOUNTS=await claudeUser.accounts.list(); return true; }catch(e){ console.warn(e); return false; }
 }
 function fmtWhen(ts){ if(!ts) return ''; const d=new Date(ts); return d.toLocaleDateString(undefined,{month:'short',day:'numeric', year: d.getFullYear()!==new Date().getFullYear()?'numeric':undefined}); }
-function showLinkModal(title, intro, link){
+function showLinkModal(title, intro, link, note){
   const body=document.getElementById('modalbody');
   body.innerHTML=`<h3>${esc(title)}</h3>
     <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">${intro}</div>
     <div class="field"><label for="lk_val">Link</label><div class="linkbox"><input id="lk_val" readonly value="${esc(link)}"><button class="btn primary sm" id="lk_copy">Copy</button></div></div>
-    <div style="font-size:11.5px;color:var(--text-faint);">Compass doesn\u2019t send emails. Paste this link into an email or chat message yourself. For security it won\u2019t be shown again, but you can always create a new one.</div>
+    <div style="font-size:11.5px;color:var(--text-faint);">${note||'Compass doesn\u2019t send emails. Paste this link into an email or chat message yourself. For security it won\u2019t be shown again, but you can always create a new one.'}</div>
     <div style="display:flex;justify-content:flex-end;margin-top:18px;"><button class="btn ghost" id="lk_done">Done</button></div>`;
   document.getElementById('modalbg').classList.add('open');
   document.querySelector('.modal').classList.add('wide');
@@ -3736,7 +3744,7 @@ function showLinkModal(title, intro, link){
 function openInviteModal(){
   const body=document.getElementById('modalbody');
   body.innerHTML=`<h3>Invite someone to Compass</h3>
-    <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">You\u2019ll get a one-time link to send them. It expires in 7 days.</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">${claudeUser.accounts.emailsInvites?'We\u2019ll email them an invite to create their account. It expires in 7 days.':'You\u2019ll get a one-time link to send them. It expires in 7 days.'}</div>
     <div class="field"><label for="iv_email">Work email</label><input id="iv_email" type="email" autocomplete="off" placeholder="jordan.ellis@zenatech.com"></div>
     <div class="field"><label for="iv_name">Name <span style="text-transform:none;font-weight:400;">(optional, they can change it)</span></label><input id="iv_name" autocomplete="off" placeholder="Jordan Ellis"></div>
     <div class="field"><label for="iv_role">Role</label><select id="iv_role">
@@ -3744,7 +3752,7 @@ function openInviteModal(){
       <option value="manager">Manager: plans, staffs and packs events</option>
       <option value="admin">Admin: everything, including people and permissions</option></select></div>
     <div id="iv_err" class="toast err" style="display:none;margin-bottom:10px;animation:none;"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;"><button class="btn ghost" id="iv_cancel">Cancel</button><button class="btn primary" id="iv_send">Create invite link</button></div>`;
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;"><button class="btn ghost" id="iv_cancel">Cancel</button><button class="btn primary" id="iv_send">${claudeUser.accounts.emailsInvites?'Send invite':'Create invite link'}</button></div>`;
   document.getElementById('modalbg').classList.add('open');
   document.getElementById('iv_email').focus();
   document.getElementById('iv_cancel').onclick=closeModal;
@@ -3757,7 +3765,8 @@ function openInviteModal(){
       const r=await claudeUser.accounts.invite(email, name, role);
       logActivity('role', `Invited ${email} as ${role}`, null);
       await loadAccounts(); if(currentView==='permissions') renderPermissions(true);
-      showLinkModal('Invite link ready', `Send this link to <b>${esc(email)}</b>. It works once and expires on ${esc(fmtWhen(r.expiresAt))}.`, r.link);
+      if(claudeUser.accounts.emailsInvites) showLinkModal('Invite sent', `We\u2019ve emailed an invite to <b>${esc(email)}</b>. It expires on ${esc(fmtWhen(r.expiresAt))}. You can also share this link with them directly.`, r.link, 'If they don\u2019t see the email within a few minutes, ask them to check spam, or send them this link yourself.');
+      else showLinkModal('Invite link ready', `Send this link to <b>${esc(email)}</b>. It works once and expires on ${esc(fmtWhen(r.expiresAt))}.`, r.link);
     }catch(e){ btn.disabled=false; btn.textContent='Create invite link'; errBox.textContent=e.message||'Couldn\u2019t create the invite.'; errBox.style.display='flex'; }
   };
 }
@@ -3809,10 +3818,11 @@ function renderPermissions(fromRefresh){
     const row=document.createElement('div'); row.className='rolerow';
     const days=Math.max(0,Math.ceil((inv.expiresAt-Date.now())/864e5));
     row.innerHTML=`<div style="min-width:0;"><div style="font-weight:600;overflow-wrap:anywhere;">${esc(inv.email)}</div><div class="acctstatus">${esc((inv.role||'attendee').replace(/^./,c=>c.toUpperCase()))} · invited${inv.invitedBy?' by '+esc(inv.invitedBy):''} ${esc(fmtWhen(inv.createdAt))} · expires in ${days} day${days===1?'':'s'}</div></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn ghost sm" data-relink>New link</button><button class="btn danger sm" data-revoke>Revoke</button></div>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn ghost sm" data-relink>${claudeUser.accounts.emailsInvites?'Resend':'New link'}</button><button class="btn danger sm" data-revoke>Revoke</button></div>`;
     row.querySelector('[data-relink]').onclick=async ()=>{
       try{ const r=await claudeUser.accounts.invite(inv.email, inv.name, inv.role); await loadAccounts(); renderPermissions(true);
-        showLinkModal('New invite link', `The old link for <b>${esc(inv.email)}</b> no longer works. This one expires on ${esc(fmtWhen(r.expiresAt))}.`, r.link); }
+        if(claudeUser.accounts.emailsInvites) showLinkModal('Invite sent again', `We\u2019ve emailed a fresh invite to <b>${esc(inv.email)}</b>. It expires on ${esc(fmtWhen(r.expiresAt))}.`, r.link, 'You can also send them this link yourself.');
+        else showLinkModal('New invite link', `The old link for <b>${esc(inv.email)}</b> no longer works. This one expires on ${esc(fmtWhen(r.expiresAt))}.`, r.link); }
       catch(e){ toast(e.message||'Couldn\u2019t create a new link','err'); }
     };
     row.querySelector('[data-revoke]').onclick=async ()=>{

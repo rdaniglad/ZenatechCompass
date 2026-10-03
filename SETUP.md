@@ -92,3 +92,46 @@ The rules in `supabase/schema.sql` are enforced by the database itself, so they 
 - Turned-off accounts can't read or change anything.
 - The owner is always an Admin and can't be turned off.
 - Photos sit in a public storage bucket under random, unguessable names, so they display like normal images. Anyone who has a photo's exact link can open it.
+
+## 8. Email notifications
+
+Compass sends two kinds of email:
+
+| Email | When | Sent by |
+|---|---|---|
+| Confirm your email | someone creates their account | Supabase Auth |
+| Reset your password | "Forgot your password?" or an Admin's **Reset password** | Supabase Auth |
+| Confirm new email / sign-in link / confirmation code | account changes | Supabase Auth |
+| You're invited to Compass | an Admin invites someone | Compass |
+| You're on the team / taken off the team | someone adds or removes you from an event | Compass |
+| Event status changed | an event you're on changes status | Compass |
+| Budget approved | an Admin approves an event you created | Compass |
+| Book your hotel/flight | 7 days before a confirmed event, if travel isn't ticked off (daily, 9:00 Toronto) | Compass |
+| How was the event? | the day after an event you attended, if you haven't submitted a report | Compass |
+| Your role changed / account turned off / back on | an Admin changes your access | Compass |
+
+People can turn activity emails off with **Email alerts** at the bottom of the menu. Account emails always arrive.
+
+**Already done in your project:** `supabase/notifications.sql` is installed (the email queue, triggers and daily jobs).
+
+**To finish:**
+
+1. **Resend:** create an account at resend.com, add the domain **zenatech.com** under **Domains**, and add the DNS records it shows (your IT team can do this). Then create an API key.
+2. **Sender function:** in Supabase, go to **Edge Functions → Deploy a new function**, name it `send-notifications`, paste in `supabase/functions/send-notifications/index.ts`, and deploy. Then open the function's **Details** and turn **Verify JWT** off. The database calls it with its own secret.
+3. **Function secrets:** in **Edge Functions → Secrets**, add `RESEND_API_KEY` (your Resend key) and `MAIL_FROM` (`Compass <compass@zenatech.com>`).
+4. **Account emails through Resend:** in **Authentication → Emails → SMTP Settings**, turn on custom SMTP with:
+   - **Host:** `smtp.resend.com`
+   - **Port:** `465`
+   - **Username:** `resend`
+   - **Password:** your Resend API key
+   - **Sender email:** `compass@zenatech.com`
+   - **Sender name:** `Compass`
+5. **Branded account emails:** paste each file from `supabase/email-templates/` into **Authentication → Emails → Templates** (see the README in that folder).
+
+**To check on sending,** run this in the SQL Editor:
+
+```sql
+select status, count(*) from notifications group by status;
+```
+
+Failed rows show the reason in the `error` column and are retried automatically, up to 5 times.
