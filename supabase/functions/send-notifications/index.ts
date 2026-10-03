@@ -2,12 +2,19 @@
 //
 // Deploy: Supabase → Edge Functions → Deploy a new function → name "send-notifications" → paste
 // this file → turn OFF "Verify JWT" (the database calls it with its own secret instead).
-// Secrets (Edge Functions → Secrets):
-//   RESEND_API_KEY   your Resend API key
-//   MAIL_FROM        e.g.  Compass <compass@zenatech.com>   (domain verified in Resend)
+// Secrets (Edge Functions → Secrets) — use ONE of the two senders:
+//   Resend (recommended once zenatech.com is verified):
+//     RESEND_API_KEY   your Resend API key
+//     MAIL_FROM        e.g.  Compass <compass@zenatech.com>
+//   Gmail (fine to start with; ~500 emails/day):
+//     GMAIL_USER          the Gmail address, e.g. you@gmail.com
+//     GMAIL_APP_PASSWORD  a Google App Password (myaccount.google.com/apppasswords), NOT your normal password
+//     MAIL_FROM           optional, e.g.  Compass <you@gmail.com>
+//   If both are set, Resend is used.
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { "Content-Type": "application/json" } });
@@ -21,8 +28,20 @@ Deno.serve(async (req) => {
   if (!ok) return json({ error: "not allowed" }, 401);
 
   const key = Deno.env.get("RESEND_API_KEY");
-  const from = Deno.env.get("MAIL_FROM") || "Compass <onboarding@resend.dev>";
-  if (!key) return json({ error: "RESEND_API_KEY is not set; emails stay queued." }, 503);
+  const gmailUser = Deno.env.get("GMAIL_USER"), gmailPass = Deno.env.get("GMAIL_APP_PASSWORD");
+  if (!key && !(gmailUser && gmailPass)) return json({ error: "No sender configured (RESEND_API_KEY or GMAIL_USER + GMAIL_APP_PASSWORD); emails stay queued." }, 503);
+  const from = Deno.env.get("MAIL_FROM") || (key ? "Compass <onboarding@resend.dev>" : `Compass <${gmailUser}>`);
+  // Gmail: one SMTP connection for the whole batch (port 465 / TLS — Supabase blocks 25 and 587)
+  const smtp = key ? null : new SMTPClient({ connection: { hostname: "smtp.gmail.com", port: 465, tls: true, auth: { username: gmailUser!, password: gmailPass!.replace(/\s+/g, "") } } });
+  async function deliver(id: number, to: string, kind: string, m: Mail) {
+    if (smtp) { await smtp.send({ from, to, subject: m.subject, content: m.text, html: m.html }); return; }
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `compass-${id}` },
+      body: JSON.stringify({ from, to: [to], subject: m.subject, html: m.html, text: m.text, tags: [{ name: "kind", value: kind }] }),
+    });
+    if (!r.ok) throw new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  }
 
   const { data: settings } = await sb.from("compass_settings").select("key,value");
   const site = (settings || []).find((s: any) => s.key === "site_url")?.value || "";
@@ -39,21 +58,16 @@ Deno.serve(async (req) => {
     const mail = render(row, site);
     if (!mail) { skipped++; await sb.from("notifications").update({ status: "skipped", error: "unknown kind" }).eq("id", row.id); continue; }
     try {
-      const r = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `compass-${row.id}` },
-        body: JSON.stringify({ from, to: [row.to_email], subject: mail.subject, html: mail.html, text: mail.text,
-                               tags: [{ name: "kind", value: row.kind }] }),
-      });
-      if (!r.ok) throw new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 300)}`);
+      await deliver(row.id, row.to_email, row.kind, mail);
       sent++;
       await sb.from("notifications").update({ status: "sent", sent_at: new Date().toISOString(), attempts: row.attempts + 1, error: null }).eq("id", row.id);
     } catch (e) {
       failed++;
       await sb.from("notifications").update({ status: "failed", attempts: row.attempts + 1, error: String((e as Error).message || e).slice(0, 500) }).eq("id", row.id);
     }
-    await new Promise((res) => setTimeout(res, 120)); // stay well under Resend's rate limit
+    await new Promise((res) => setTimeout(res, 120)); // stay well under the provider's rate limit
   }
+  if (smtp) await smtp.close().catch(() => {});
   return json({ sent, failed, skipped });
 });
 
