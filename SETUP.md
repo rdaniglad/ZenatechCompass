@@ -44,19 +44,19 @@ npx serve -l 8080
 
 Or, if you have Python: `python -m http.server 8080`. Then open http://localhost:8080.
 
-## 5. Put it online with Vercel
+## 5. Put it online with GitHub Pages (already set up)
 
-1. Go to vercel.com and sign in with GitHub (the **rdaniglad** account).
-2. **Add New → Project**, import **rdaniglad/ZenatechCompass**.
-3. Set **Root Directory** to `web` and **Framework Preset** to **Other**. Leave the build settings empty.
-4. Click **Deploy**. You'll get an address like `https://zenatech-compass.vercel.app`.
-5. Back in Supabase, put that address into **Site URL** and **Redirect URLs** (step 2).
+Every push to `main` publishes the `web/` folder automatically (`.github/workflows/pages.yml`).
+Compass lives at **https://rdaniglad.github.io/ZenatechCompass/**.
 
-From then on, every `git push` redeploys automatically.
+- **First time only:** in the repo, go to **Settings → Pages** and set **Source** to **GitHub Actions**.
+- **To check a deploy:** open the repo's **Actions** tab.
+
+To use Vercel or Netlify instead, import the repo, set the root directory to `web` with no build step, and add the new address to the Supabase Site URL and Redirect URLs.
 
 ## 6. Create your owner account
 
-1. Open `https://YOUR-DOMAIN/login.html?invite=daniela@zenatech.com`.
+1. Open `https://rdaniglad.github.io/ZenatechCompass/login.html?invite=daniela@zenatech.com`.
 2. Enter your name and a password.
 3. Open the confirmation email and click the link. You're signed in as the owner, who is always an Admin.
 
