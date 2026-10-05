@@ -67,11 +67,15 @@ In Compass go to **Permissions → + Invite people**, enter their email and choo
 - **Forgot password:** people click **Forgot your password?** on the sign-in page and get an email. Admins can also send one with **Reset password** on Permissions.
 - **Turn off:** blocks that person from all data immediately.
 
-## Optional: AI suggestions on the Discover page
+## AI search on the Discover page
 
-1. In Supabase: **Edge Functions → Deploy a new function**, name it `discover`, paste in `supabase/functions/discover/index.ts`, and deploy.
-2. **Edge Functions → Secrets**: add `ANTHROPIC_API_KEY` with your key from console.anthropic.com.
-3. In `web/config.js`, set `aiDiscover: true`.
+Discover searches the web live with Claude. It finds upcoming events matching an industry, region and timeframe, with dates, venue, official website and sources. It also flags shows you already track.
+
+1. **API key:** create one at console.anthropic.com → **API Keys**. Usage is billed by Anthropic and costs a few cents per search.
+2. **Deploy the function:** in Supabase, go to **Edge Functions → Deploy a new function**, name it `discover`, paste in `supabase/functions/discover/index.ts`, and deploy. Then open its **Details** and turn **Verify JWT** off; the function checks the signed-in Compass user itself.
+3. **Add the key:** in **Edge Functions → Secrets**, add `ANTHROPIC_API_KEY`.
+
+Until this is done, Discover shows a message that AI search isn't set up yet.
 
 ## What protects the data
 

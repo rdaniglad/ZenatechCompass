@@ -226,16 +226,24 @@
     };
   }
 
-  /* ---------------- AI Discover (optional Edge Function) ---------------- */
+  /* ---------------- AI Discover (Edge Function "discover": live web search) ---------------- */
+  async function invokeDiscover(body) {
+    const { data, error } = await sb.functions.invoke('discover', { body });
+    if (error) {
+      let msg = '';
+      try { const j = await error.context.json(); msg = j && j.error; } catch (e) {}
+      if (!msg && /not found|404|Failed to send/i.test(String(error.message))) msg = 'AI search isn\u2019t set up yet. An Admin needs to deploy the "discover" function in Supabase (see SETUP.md).';
+      throw new Error(msg || error.message || 'AI search failed.');
+    }
+    if (data && data.error) throw new Error(data.error);
+    return data;
+  }
   function makeSample() {
-    if (!cfg.aiDiscover) return null;
     return {
-      async json(prompt) {
-        const { data, error } = await sb.functions.invoke('discover', { body: { prompt } });
-        if (error) throw fail(error);
-        if (data && data.error) throw new Error(data.error);
-        return data;
-      },
+      // structured live search used by the Discover page
+      discover: (params) => invokeDiscover(params),
+      // generic fallback kept for compatibility
+      async json(prompt) { const d = await invokeDiscover({ industry: String(prompt).slice(0, 200) }); return d.events || []; },
     };
   }
 

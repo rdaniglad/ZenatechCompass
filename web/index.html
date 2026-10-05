@@ -2991,61 +2991,100 @@ function openFeedbackModal(ev, existing){
    ============================================================ */
 function renderDiscover(){
   const main=document.getElementById('main');
+  const live = !!(claudeSample && typeof claudeSample.discover==='function');
   main.innerHTML=`
-    <div class="topbar"><div><div class="pagetitle">Discover events</div><div class="pagesub">AI-assisted research to seed your pipeline with candidate events</div></div></div>
-    <div class="banner">⚠️ This runs on Claude's knowledge, not a live internet crawl — published pages can't reach outside sites. Treat results as a starting shortlist and verify dates, venues and links yourself before confirming.</div>
+    <div class="topbar"><div><div class="pagetitle">Discover events</div><div class="pagesub">Find upcoming trade shows and conferences to add to your pipeline</div></div></div>
+    ${live
+      ? '<div class="banner" style="background:rgba(14,148,136,.08);border-color:rgba(14,148,136,.28);color:var(--text-dim);">🔎 Searches the web live with Claude and links each result to its source. Check dates and venues on the official site before you confirm an event.</div>'
+      : (claudeSample ? '<div class="banner">Suggestions come from Claude’s knowledge, not a live web search. Check dates, venues and links before you confirm an event.</div>'
+                      : '<div class="banner" style="background:rgba(224,154,46,.1);border-color:rgba(224,154,46,.35);color:var(--amber);">AI search isn’t available in this version of Compass.</div>')}
     <div class="panel panel-pad">
-      <div class="discoverform">
-        <div class="field" style="margin:0;"><label>Industry / keyword</label><input id="dq_industry" placeholder="e.g. commercial roofing, defense tech"></div>
-        <div class="field" style="margin:0;"><label>Region</label><input id="dq_region" placeholder="e.g. North America"></div>
-        <div class="field" style="margin:0;"><label>Timeframe</label><input id="dq_time" placeholder="e.g. next 6 months"></div>
-        <button class="btn primary" id="dq_go">Search</button>
-      </div>
+      <form class="discoverform" id="dq_form">
+        <div class="field" style="margin:0;"><label for="dq_industry">Industry / keyword</label><input id="dq_industry" placeholder="e.g. commercial roofing, defense tech" value="${esc(DISCOVER_STATE.industry)}"></div>
+        <div class="field" style="margin:0;"><label for="dq_region">Region</label><input id="dq_region" placeholder="e.g. North America" value="${esc(DISCOVER_STATE.region)}"></div>
+        <div class="field" style="margin:0;"><label for="dq_time">Timeframe</label><input id="dq_time" placeholder="e.g. next 6 months" value="${esc(DISCOVER_STATE.time)}"></div>
+        <button class="btn primary" id="dq_go" type="submit" ${claudeSample?'':'disabled'}>Search</button>
+      </form>
       <div id="dq_results"></div>
     </div>
   `;
-  document.getElementById('dq_go').addEventListener('click', runDiscover);
+  document.getElementById('dq_form').addEventListener('submit', ev=>{ ev.preventDefault(); runDiscover(); });
+  if(DISCOVER_STATE.last) showDiscoverResults(DISCOVER_STATE.last);
 }
+let DISCOVER_STATE={industry:'', region:'', time:'', last:null};
+function normName(s){ return String(s||'').toLowerCase().replace(/\b(20\d\d)\b/g,'').replace(/[^a-z0-9]+/g,' ').trim(); }
 async function runDiscover(){
   const industry=document.getElementById('dq_industry').value.trim();
   const region=document.getElementById('dq_region').value.trim();
   const time=document.getElementById('dq_time').value.trim();
-  const results=document.getElementById('dq_results');
-  if(!claudeSample){ results.innerHTML="<div class=\"empty-state\">AI research isn't available in this session.</div>"; return; }
-  results.innerHTML='<div style="padding:20px;color:var(--text-dim);font-size:13px;">Thinking…</div>';
-  const prompt=`You help a business events team shortlist trade shows and conferences worth investigating.
-Industry/keyword: ${industry||'general B2B'}
+  Object.assign(DISCOVER_STATE,{industry,region,time});
+  const results=document.getElementById('dq_results'), btn=document.getElementById('dq_go');
+  if(!claudeSample){ results.innerHTML="<div class=\"empty-state\">AI search isn't available in this version of Compass.</div>"; return; }
+  if(!industry){ results.innerHTML='<div class="empty-state" style="padding:24px;">Enter an industry or keyword to search for.</div>'; document.getElementById('dq_industry').focus(); return; }
+  btn.disabled=true; btn.textContent='Searching…';
+  results.innerHTML='<div style="padding:20px;color:var(--text-dim);font-size:13px;display:flex;gap:10px;align-items:center;"><span class="spin" style="width:16px;height:16px;"></span> Searching the web for matching events. This usually takes 20–60 seconds.</div>';
+  try{
+    let list, sources=[];
+    if(typeof claudeSample.discover==='function'){
+      const known=[...new Set(EVENTS.map(e=>e.name).filter(Boolean))];
+      const out=await claudeSample.discover({industry, region, timeframe:time, known});
+      list=out.events||[]; sources=out.sources||[];
+    } else {
+      const prompt=`You help a business events team shortlist trade shows and conferences worth investigating.
+Industry/keyword: ${industry}
 Region: ${region||'anywhere'}
 Timeframe: ${time||'the next 12 months'}
-
-Suggest up to 6 real, well-known recurring trade shows / conferences / summits that plausibly match this brief, based on what you know. For each, give your best estimate of timing and a one-line reason it fits — but be clear this is a memory-based suggestion, not a live lookup.
-Respond ONLY with JSON, no markdown fences, no prose: an array of objects with keys: name, typicalTiming (string), location (string), why (string, one sentence).`;
-  try{
-    const out = await claudeSample.json(prompt, {modelTier:'default'});
-    const list = Array.isArray(out) ? out : (out.events||[]);
-    if(!list || list.length===0){ results.innerHTML='<div class="empty-state">No suggestions came back — try different terms.</div>'; return; }
-    results.innerHTML='<div class="subhead" style="margin-top:20px;">Suggestions</div>';
-    list.forEach(item=>{
-      const card=document.createElement('div'); card.className='suggestcard';
-      card.innerHTML=`<h4>${esc(item.name||'Untitled event')}</h4>
-        <div class="meta">${esc(item.typicalTiming||'Timing unconfirmed')} · ${esc(item.location||'Location unconfirmed')}</div>
-        <div class="why">${esc(item.why||'')}</div>
-        ${can('create_event')?'<button class="btn sm">Add to pipeline</button>':''}`;
-      const addBtn=card.querySelector('button');
-      if(addBtn) addBtn.addEventListener('click', async ()=>{
-        const doc={ name:item.name||'Untitled event', start:'', end:'', country:'', state:'', location:item.location||'',
-          business:'', audience:null, year:'', status:'Investigating', website:'', attendees:[], collateral:[],
-          maxAttendees:6, cost:{}, impact:{priority:'Medium', objective:'Lead Generation'},
-          notes:'AI-suggested lead: '+(item.why||'')+' (verify details before confirming)',
-          createdBy:ME_ID, createdAt:Date.now() };
-        const id=uid('ev'); EVENTS.push(Object.assign({id},doc));
-        if(claudeDb){ try{ await claudeDb.collection('events').doc(id).set(doc); }catch(e){} }
-        toast('Added to pipeline as Investigating'); addBtn.textContent='Added ✓'; addBtn.disabled=true;
-      });
-      results.appendChild(card);
-    });
+Suggest up to 6 real recurring events that match. Respond ONLY with a JSON array of objects with keys: name, startDate ("" if unsure), endDate, city, country, website, why.`;
+      const out=await claudeSample.json(prompt,{modelTier:'default'});
+      list=Array.isArray(out)?out:(out.events||[]);
+    }
+    DISCOVER_STATE.last={list, sources};
+    showDiscoverResults(DISCOVER_STATE.last);
   }catch(e){
-    results.innerHTML=`<div class="empty-state">Couldn't get suggestions right now (${esc(e.code||e.message||'error')}). Try again shortly.</div>`;
+    results.innerHTML=`<div class="empty-state" style="padding:28px;">${esc(e.message||'Couldn’t search right now.')}</div>`;
+  }finally{ btn.disabled=false; btn.textContent='Search'; }
+}
+function showDiscoverResults({list, sources}){
+  const results=document.getElementById('dq_results'); if(!results) return;
+  if(!list || !list.length){ results.innerHTML='<div class="empty-state" style="padding:28px;">No matching events found. Try a broader keyword, region or timeframe.</div>'; return; }
+  const known=new Map(EVENTS.map(e=>[normName(e.name), e]));
+  results.innerHTML=`<div class="subhead" style="margin-top:20px;">${list.length} suggestion${list.length===1?'':'s'}</div>`;
+  list.forEach(item=>{
+    const start=/^\d{4}-\d{2}-\d{2}$/.test(item.startDate||'')?item.startDate:'';
+    const end=/^\d{4}-\d{2}-\d{2}$/.test(item.endDate||'')?item.endDate:start;
+    const place=[item.venue, item.city, item.country].filter(Boolean).join(', ') || item.location || 'Location to be confirmed';
+    const when=start ? (fmtDateShort(start)+(end&&end!==start?' – '+fmtDateShort(end):'')+', '+start.slice(0,4)) : (item.typicalTiming||'Dates to be confirmed');
+    const site=/^https?:\/\//i.test(item.website||'') ? item.website : '';
+    const existing=known.get(normName(item.name));
+    const card=document.createElement('div'); card.className='suggestcard';
+    card.innerHTML=`<h4>${esc(item.name||'Untitled event')}</h4>
+      <div class="meta">${esc(when)} · ${esc(place)}${item.audience?` · ~${Number(item.audience).toLocaleString()} attendees`:''}</div>
+      <div class="why">${esc(item.why||'')}</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        ${existing?`<button class="btn ghost sm" data-open>Already in your pipeline · Open</button>`:(can('create_event')?'<button class="btn sm" data-add>Add to pipeline</button>':'')}
+        ${site?`<a href="${esc(site)}" target="_blank" rel="noopener" style="font-size:12px;color:var(--cyan);">Official website ↗</a>`:''}
+      </div>`;
+    const openBtn=card.querySelector('[data-open]'); if(openBtn) openBtn.addEventListener('click',()=>openEventDrawer(existing.id));
+    const addBtn=card.querySelector('[data-add]');
+    if(addBtn) addBtn.addEventListener('click', async ()=>{
+      addBtn.disabled=true;
+      const doc={ name:item.name||'Untitled event', start, end, country:item.country||'', state:'', location:place,
+        business:'', audience:Number(item.audience)||null, year:start?start.slice(0,4):'', status:'Investigating', website:site, attendees:[], collateral:[],
+        maxAttendees:6, cost:{}, impact:{priority:'Medium', objective:'Lead Generation'},
+        notes:'Found with Discover'+(DISCOVER_STATE.industry?` (search: ${DISCOVER_STATE.industry})`:'')+'. '+(item.why||'')+' Verify details before confirming.',
+        createdBy:ME_ID, createdAt:Date.now() };
+      const id=uid('ev'); EVENTS.push(Object.assign({id},doc));
+      try{ if(claudeDb) await claudeDb.collection('events').doc(id).set(doc); }
+      catch(e){ EVENTS=EVENTS.filter(x=>x.id!==id); addBtn.disabled=false; toast(e.message||'Couldn’t add the event','err'); return; }
+      logActivity('create', `Added "${doc.name}" from Discover`, id);
+      toast('Added to pipeline as Investigating','ok'); addBtn.textContent='Added ✓';
+    });
+    results.appendChild(card);
+  });
+  if(sources && sources.length){
+    const d=document.createElement('details'); d.style.cssText='margin-top:12px;font-size:12px;color:var(--text-dim);';
+    d.innerHTML=`<summary style="cursor:pointer;">Sources (${sources.length})</summary><div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">${sources.slice(0,30).map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--cyan);overflow-wrap:anywhere;">${esc(u)}</a>`).join('')}</div>`;
+    results.appendChild(d);
   }
 }
 

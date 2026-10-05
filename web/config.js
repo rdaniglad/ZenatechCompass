@@ -9,7 +9,4 @@ window.COMPASS_CONFIG = {
   // Publishable key (sb_publishable_…) — or the legacy "anon public" key
   supabaseKey: 'sb_publishable_oVdykmbWh5cS-gYMcU9gTg_1J9LbGqw',
 
-  // Optional: AI suggestions on the Discover page. Needs the "discover" Edge Function
-  // (supabase/functions/discover) deployed with an ANTHROPIC_API_KEY secret. See SETUP.md.
-  aiDiscover: false,
 };
