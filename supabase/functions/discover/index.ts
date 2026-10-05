@@ -4,7 +4,6 @@
 // turn OFF "Verify JWT with legacy secret" (this function checks the signed-in Compass user itself).
 // Secret (Edge Functions → Secrets):  ANTHROPIC_API_KEY  — from console.anthropic.com (usage is billed by Anthropic)
 // Optional secret: ANTHROPIC_MODEL (default below).
-// Then set aiDiscover: true in web/config.js.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
