@@ -141,7 +141,7 @@ Compass is **invite-only**. Every person has exactly one role.
 Browser (web/ — static HTML/JS, no build step)
    │  supabase-js
    ▼
-Supabase project punsnbirawomuoeyaxty
+Supabase project ZenatechProject (qjxdfqtzcrsopprcmicr)
    ├─ Auth            invite-only email/password, confirmation, resets
    ├─ Postgres        data + Row Level Security + triggers
    ├─ Storage         "photos" bucket
@@ -213,6 +213,6 @@ Supabase project punsnbirawomuoeyaxty
 |---|---|---|---|
 | 1 | Add the Resend DNS records for zenatech.com in Route 53, then switch email to Resend (`daniela@zenatech.com`) | IT / Daniela | Pending |
 | 2 | Save `ANTHROPIC_API_KEY` under that exact name so Discover works | Daniela | Pending |
-| 3 | Delete the wrongly named Edge Function secrets | Daniela | Pending |
+| 3 | Delete the wrongly named secrets in the old project (kept as backup), then retire it | Daniela | Pending |
 | 4 | Link people's new accounts to their existing roster entries (for example Phil) | Dev | Proposed |
 | 5 | Decide whether the GitHub repo should be private (needs a paid plan for Pages) | Daniela | Open |

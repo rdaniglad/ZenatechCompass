@@ -23,7 +23,7 @@ create policy "admins manage settings" on public.compass_settings for all to aut
   using (public.is_admin()) with check (public.is_admin());
 insert into public.compass_settings (key, value) values
   ('site_url',      'https://rdaniglad.github.io/ZenatechCompass/'),
-  ('functions_url', 'https://punsnbirawomuoeyaxty.supabase.co/functions/v1/send-notifications'),
+  ('functions_url', 'https://qjxdfqtzcrsopprcmicr.supabase.co/functions/v1/send-notifications'),
   ('travel_reminder_days', '7')
 on conflict (key) do nothing;
 
