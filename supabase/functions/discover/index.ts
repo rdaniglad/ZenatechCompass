@@ -26,7 +26,8 @@ Deno.serve(async (req) => {
   const { data: prof } = await admin.from("profiles").select("disabled").eq("id", auth.user.id).maybeSingle();
   if (!prof || prof.disabled) return json({ error: "Your Compass account can't use this." }, 403);
 
-  const key = Deno.env.get("ANTHROPIC_API_KEY");
+  // The key is normally saved as ANTHROPIC_API_KEY; also accept it under any other secret name (Claude keys start with "sk-ant-")
+  const key = Deno.env.get("ANTHROPIC_API_KEY") || Object.values(Deno.env.toObject()).find((v) => typeof v === "string" && v.trim().startsWith("sk-ant-"))?.trim();
   if (!key) return json({ error: "AI search isn't set up yet. An Admin needs to add the ANTHROPIC_API_KEY secret in Supabase." }, 503);
 
   let body: Record<string, string> = {};
