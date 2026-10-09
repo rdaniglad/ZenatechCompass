@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Compass Specification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: single reading column with a sticky contents rail on wide screens; uses Compass's own brand faces and teal/violet route colors */
+:root{
+  --bg:#f6f8f9; --surface:#ffffff; --fg:#14202b; --muted:#56656f; --line:#dde4e8;
+  --accent:#138f80; --accent-soft:#e2f4f1; --violet:#6b5bd6;
+  --display:"Space Grotesk",system-ui,sans-serif; --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e141a; --surface:#151d25; --fg:#e7edf1; --muted:#9aa9b3; --line:#26323c;
+  --accent:#2cc4b0; --accent-soft:#12302d; --violet:#a397f5; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e141a; --surface:#151d25; --fg:#e7edf1; --muted:#9aa9b3; --line:#26323c;
+  --accent:#2cc4b0; --accent-soft:#12302d; --violet:#a397f5; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15.5px/1.65 var(--body);padding:0 16px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:200px minmax(0,1fr);gap:56px;padding-block:48px 80px}
+nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:13px}
+nav .lbl{font:600 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+nav ol{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+nav a{color:var(--muted);text-decoration:none;display:flex;gap:8px}
+nav a:hover,nav a:focus-visible{color:var(--accent)}
+nav a span{font-family:var(--mono);font-size:11px;color:var(--accent);min-width:18px;padding-top:2px}
+main{min-width:0;max-width:720px}
+header.doc{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:8px}
+.eyebrow{font:600 12px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 44px/1.05 var(--display);letter-spacing:-.02em;margin:14px 0 12px;text-wrap:balance}
+.lede{font-size:18px;color:var(--muted);margin:0 0 22px;max-width:60ch}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 24px;font-size:13px;margin:0}
+.meta dt{color:var(--muted);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.meta dd{margin:2px 0 0;font-weight:500;overflow-wrap:anywhere}
+section{padding-top:44px;scroll-margin-top:24px}
+h2{font:600 26px/1.2 var(--display);margin:0 0 14px;display:flex;gap:12px;align-items:baseline;text-wrap:balance}
+h2 .n{font:500 13px var(--mono);color:var(--accent)}
+h3{font:600 17px/1.3 var(--display);margin:28px 0 8px}
+p{margin:0 0 14px;max-width:68ch}
+ul{margin:0 0 14px;padding-left:20px;max-width:68ch}
+li{margin-bottom:4px}
+strong{font-weight:600}
+code{font:500 13px var(--mono);background:var(--accent-soft);color:var(--fg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.tbl{overflow-x:auto;margin:6px 0 18px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:520px}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600}
+.name{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:18px 0 8px}
+.name div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.name b{display:block;font:600 15px var(--display);color:var(--accent);margin-bottom:4px}
+.name p{font-size:14px;color:var(--muted);margin:0}
+blockquote{margin:18px 0;padding:4px 0 4px 18px;border-left:3px solid var(--violet);font:500 19px/1.45 var(--display);max-width:60ch}
+.arch{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;overflow-x:auto;font:500 12.5px/1.6 var(--mono);color:var(--fg);white-space:pre;margin:6px 0 18px}
+.pill{display:inline-block;font:600 11px/1 var(--body);padding:4px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.pill.p{background:transparent;border:1px solid var(--line);color:var(--muted)}
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:820px){.wrap{grid-template-columns:minmax(0,1fr);gap:0;padding-block:28px 56px}nav{display:none}h1{font-size:34px}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<nav aria-label="Contents">
+  <div class="lbl">Contents</div>
+  <ol>
+    <li><a href="#purpose"><span>1</span>Purpose</a></li>
+    <li><a href="#stands"><span>2</span>What it stands for</a></li>
+    <li><a href="#goals"><span>3</span>Goals</a></li>
+    <li><a href="#users"><span>4</span>Users &amp; roles</a></li>
+    <li><a href="#features"><span>5</span>What it does</a></li>
+    <li><a href="#emails"><span>6</span>Notifications</a></li>
+    <li><a href="#tech"><span>7</span>How it's built</a></li>
+    <li><a href="#security"><span>8</span>Security</a></li>
+    <li><a href="#nfr"><span>9</span>Quality targets</a></li>
+    <li><a href="#scope"><span>10</span>Out of scope</a></li>
+    <li><a href="#open"><span>11</span>Open items</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="doc">
+  <div class="eyebrow">Product specification · v1.1</div>
+  <h1>Compass</h1>
+  <p class="lede">Zenatech's Global Events Command Center: one shared place to decide which trade shows and conferences to attend, run them well, and learn whether they were worth it.</p>
+  <dl class="meta">
+    <div><dt>Owner</dt><dd>Daniela · daniela@zenatech.com</dd></div>
+    <div><dt>Status</dt><dd>In production (pilot)</dd></div>
+    <div><dt>Live at</dt><dd>rdaniglad.github.io/ZenatechCompass</dd></div>
+    <div><dt>Updated</dt><dd>October 9, 2026</dd></div>
+  </dl>
+</header>
+
+<section id="purpose">
+  <h2><span class="n">1</span>Purpose</h2>
+  <p>Zenatech evaluates more than 200 candidate events a year across its business units (DaaS, ZD, IQ Nano, ZT and SaaS). Before Compass, that pipeline lived in spreadsheets and email threads. Nobody had one view of who was going where, what it cost, what had been shipped, or what came back from it.</p>
+  <p>Compass replaces that with a single, live, invite-only web app. It covers the whole life of an event:</p>
+  <ul>
+    <li><strong>Choose:</strong> find and score candidate events, including AI-assisted discovery.</li>
+    <li><strong>Plan:</strong> budget, approval, team, collateral and travel.</li>
+    <li><strong>Run:</strong> readiness tracking, milestones, alerts and reminders.</li>
+    <li><strong>Learn:</strong> post-event reports with photos, cost per lead and an impact score that feed next year's choices.</li>
+  </ul>
+</section>
+
+<section id="stands">
+  <h2><span class="n">2</span>What it stands for</h2>
+  <blockquote>Every show, every traveler, one map.</blockquote>
+  <p>The name is the idea. A compass gives direction. It doesn't make the trip for you; it makes sure you're heading the right way. Compass does the same for Zenatech's event program, in four ways:</p>
+  <div class="name">
+    <div><b>Direction</b><p>Spend event budget where it pays back. Every event carries an objective, a priority, a cost per lead and an impact score.</p></div>
+    <div><b>One source of truth</b><p>One list of events, people and materials that everyone sees live, instead of copies in inboxes.</p></div>
+    <div><b>Accountability</b><p>Every change is logged, budgets need approval, and every attendee closes the loop with a report.</p></div>
+    <div><b>Global by design</b><p>A world map at the center, because Zenatech's events, people and stock are spread across countries and time zones.</p></div>
+  </div>
+  <p>Its principles are simple. The app is <strong>invite-only and secure by default</strong>, gives people <strong>the least access their role needs</strong>, is <strong>quick to use on a phone at a booth</strong>, and <strong>emails people only when something concerns them</strong>.</p>
+</section>
+
+<section id="goals">
+  <h2><span class="n">3</span>Goals and how we measure them</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Goal</th><th>How Compass supports it</th><th>Measure</th></tr></thead>
+    <tbody>
+      <tr><td>Better event choices</td><td>Pipeline with priority, objective, audience, cost and impact score; AI Discover finds new shows</td><td>Share of attended events rated "worth attending again"</td></tr>
+      <tr><td>Nothing missed</td><td>Readiness score, milestones, travel tracking, alerts and email reminders</td><td>Events at 100% readiness before the start date</td></tr>
+      <tr><td>Controlled spend</td><td>Cost per event, budget approval gate, rollups by business unit, quarter and year</td><td>Spend vs. budget; cost per lead</td></tr>
+      <tr><td>A learning loop</td><td>Post-event reports with photos, exported to Word</td><td>Reports submitted within 3 days of an event</td></tr>
+      <tr><td>Less coordination</td><td>One live source of truth and automatic notifications</td><td>Fewer status emails and meetings</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="users">
+  <h2><span class="n">4</span>Users and roles</h2>
+  <p>Compass is invite-only, and every person has exactly one role.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Role</th><th>Who</th><th>Can do</th></tr></thead>
+    <tbody>
+      <tr><td>Admin</td><td>Marketing and events leads</td><td>Everything, including inviting people, changing roles, turning accounts off, deleting events, approving budgets and editing the roster</td></tr>
+      <tr><td>Manager</td><td>Event planners, BU leads</td><td>Create and edit events, staff them, pack collateral, manage the library, read all reports</td></tr>
+      <tr><td>Attendee</td><td>Staff who travel to events</td><td>See their conferences, join or leave teams, update their own travel, write their own reports</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><strong>Owner:</strong> daniela@zenatech.com is always an Admin and can't be turned off.</li>
+    <li><strong>Preview as:</strong> Admins can view Compass as another role or another person, read-only.</li>
+  </ul>
+</section>
+
+<section id="features">
+  <h2><span class="n">5</span>What it does</h2>
+
+  <h3>Sign-in and accounts</h3>
+  <ul>
+    <li><strong>Sign-in:</strong> email and password, with a minimum of 10 characters.</li>
+    <li><strong>Invites:</strong> an Admin chooses an email and a role. The invite link is emailed, lasts 7 days and can also be copied.</li>
+    <li><strong>Account creation:</strong> only invited emails can create an account, and the email address must be confirmed.</li>
+    <li><strong>Password resets:</strong> self-service by email, or sent by an Admin.</li>
+    <li><strong>Account settings:</strong> change password, sign out, and an Email alerts on/off switch.</li>
+    <li><strong>Turning an account off:</strong> blocks all data access immediately.</li>
+  </ul>
+
+  <h3>Mission Control (dashboard)</h3>
+  <ul>
+    <li><strong>Key figures:</strong> tracked events, events in the next 90 days, events at risk (under 70% ready within 30 days), committed spend, people traveling and average readiness.</li>
+    <li><strong>World map:</strong> flat map or rotating globe, with every event pinned and colored by status.</li>
+    <li><strong>Lists:</strong> "Up next" and "Needs attention".</li>
+    <li><strong>Alerts:</strong> travel not booked within 14 days of an event, and people double-booked on overlapping events.</li>
+  </ul>
+
+  <h3>Events pipeline</h3>
+  <ul>
+    <li><strong>Table:</strong> filters by year, status, business unit and text search.</li>
+    <li><strong>Statuses:</strong> <span class="pill p">Investigating</span> <span class="pill">Confirmed</span> <span class="pill p">Waitlist / Next Year</span> <span class="pill">Completed</span> <span class="pill p">Will Not Attend Again</span></li>
+    <li><strong>Each event has seven tabs:</strong> Overview, Cost &amp; Impact, Team, Collateral, Travel, Progress and Feedback.</li>
+    <li><strong>Readiness score (0–100):</strong> cost entered 20, team assigned 25, required collateral packed 25, status confirmed 15, website on file 15.</li>
+    <li><strong>Budget gate:</strong> an event can't become Confirmed or Completed until an Admin approves its budget.</li>
+  </ul>
+
+  <h3>Project Map</h3>
+  <ul>
+    <li><strong>Milestones:</strong> Paid, Staffed and Resourced (set manually), and Travel Planned, Checked In and Attended (set automatically from travelers' own updates).</li>
+  </ul>
+
+  <h3>My Conferences</h3>
+  <ul>
+    <li><strong>Attendee home page:</strong> my events, my travel status, and quick buttons to update travel or write a report.</li>
+  </ul>
+
+  <h3>Resource Map and Inventory</h3>
+  <ul>
+    <li><strong>Resource Map:</strong> shows where people and materials are going, with routes from each traveler's home city.</li>
+    <li><strong>Assigning:</strong> drag (or tap) a person or item onto an event.</li>
+    <li><strong>Inventory:</strong> stock by location, with over-allocation blocked.</li>
+  </ul>
+
+  <h3>Team &amp; Roster, Collateral Library</h3>
+  <ul>
+    <li><strong>Roster:</strong> people with title, email and home location.</li>
+    <li><strong>CSV import:</strong> includes a preview, duplicate detection and validation.</li>
+    <li><strong>Collateral Library:</strong> items with stock per location and a "required for every event" flag.</li>
+  </ul>
+
+  <h3>Budget and Analytics</h3>
+  <ul>
+    <li><strong>Budget:</strong> spend by business unit, quarter and year, with CSV export.</li>
+    <li><strong>Analytics:</strong> total spend, expected leads, blended cost per lead, average impact, and best and worst events by cost per lead.</li>
+  </ul>
+
+  <h3>Feedback (post-event reports)</h3>
+  <ul>
+    <li><strong>Content:</strong> purpose, summary, recommendation, follow-ups, links and photos.</li>
+    <li><strong>Visibility:</strong> attendees see their own reports; Managers and Admins see all of them.</li>
+    <li><strong>Word export:</strong> one click produces a formatted .docx with the photos embedded.</li>
+  </ul>
+
+  <h3>Discover (AI event research)</h3>
+  <ul>
+    <li><strong>Search:</strong> live web search by industry, region and timeframe, using Claude with web search.</li>
+    <li><strong>Results:</strong> name, dates, venue, city, expected audience, why it fits, the official website and sources.</li>
+    <li><strong>Duplicates:</strong> events already in the pipeline are flagged.</li>
+    <li><strong>Add to pipeline:</strong> one click creates an Investigating event.</li>
+  </ul>
+
+  <h3>Activity Log and live updates</h3>
+  <ul>
+    <li><strong>Activity Log:</strong> who did what and when, keeping the newest 1,000 entries.</li>
+    <li><strong>Live updates:</strong> changes appear for everyone without reloading.</li>
+    <li><strong>Concurrent edits:</strong> two people editing the same event don't overwrite each other.</li>
+    <li><strong>Devices and themes:</strong> works on desktop, tablet and phone, in light and dark mode.</li>
+  </ul>
+</section>
+
+<section id="emails">
+  <h2><span class="n">6</span>Notifications</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Email</th><th>Sent when</th></tr></thead>
+    <tbody>
+      <tr><td>Account emails</td><td>Confirm email, reset password, change email, sign-in link, confirmation code (Compass-branded)</td></tr>
+      <tr><td>Invited to Compass</td><td>An Admin invites someone</td></tr>
+      <tr><td>On / off the team</td><td>Someone adds or removes you from an event</td></tr>
+      <tr><td>Status changed</td><td>An event you're on changes status</td></tr>
+      <tr><td>Budget approved</td><td>An Admin approves an event you created</td></tr>
+      <tr><td>Book your travel</td><td>7 days before a confirmed event, if travel isn't marked booked (daily, 9:00 Toronto)</td></tr>
+      <tr><td>How was the event?</td><td>The day after an event you attended, if you haven't sent a report</td></tr>
+      <tr><td>Access changed</td><td>Your role changes, or your account is turned off or back on</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><strong>No self-notifications:</strong> nobody is emailed about their own action.</li>
+    <li><strong>Opting out:</strong> activity emails can be switched off; account emails always arrive.</li>
+    <li><strong>Retries:</strong> failed sends are retried up to 5 times.</li>
+  </ul>
+</section>
+
+<section id="tech">
+  <h2><span class="n">7</span>How it's built</h2>
+  <div class="arch" role="img" aria-label="Architecture: browser app talks to the Supabase project ZenatechProject, which uses Gmail or Resend for email and the Claude API for search">Browser — static web app (HTML/JS, no build step)
+   │  supabase-js over HTTPS + WebSocket
+   ▼
+Supabase project "ZenatechProject"  (qjxdfqtzcrsopprcmicr)
+   ├─ Auth             invite-only email + password
+   ├─ Postgres         data, row-level security, triggers
+   ├─ Storage          "photos" bucket
+   ├─ Realtime         live updates
+   ├─ pg_cron / pg_net daily reminders, email hand-off
+   └─ Edge Functions   send-notifications · discover
+          │                    │
+          ▼                    ▼
+   Gmail SMTP → Resend     Claude API + web search</div>
+  <div class="tbl"><table>
+    <thead><tr><th>Part</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>Front end</td><td><code>web/</code>: <code>index.html</code>, <code>login.html</code>, <code>compass-shim.js</code> (Supabase bridge) and <code>config.js</code> (project URL + publishable key)</td></tr>
+      <tr><td>Hosting</td><td>GitHub Pages, deployed on every push to <code>main</code>. A hosting package for a Zenatech domain is ready.</td></tr>
+      <tr><td>Database</td><td><code>profiles</code>, <code>invites</code>, document tables (<code>events</code>, <code>roster</code>, <code>collateral_library</code>, <code>feedback</code>, <code>activity_log</code>), <code>notifications</code> outbox and <code>compass_settings</code></td></tr>
+      <tr><td>Backend code</td><td><code>supabase/schema.sql</code>, <code>notifications.sql</code>, <code>functions/</code>, <code>email-templates/</code> and <code>tests/</code></td></tr>
+      <tr><td>Source code</td><td>github.com/rdaniglad/ZenatechCompass</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="security">
+  <h2><span class="n">8</span>Security</h2>
+  <ul>
+    <li><strong>Row-level security on every table:</strong> nothing is readable without signing in, and turned-off accounts see nothing.</li>
+    <li><strong>Rules are enforced in the database, not just the screen:</strong> attendees can only change their own team membership and travel, and only Admins change roles.</li>
+    <li><strong>Invite enforcement:</strong> the database refuses sign-ups from emails that weren't invited.</li>
+    <li><strong>Secrets:</strong> the AI key, the email password and the notification secret live only in Supabase secrets and Vault, never in code. The key in <code>config.js</code> is public by design.</li>
+    <li><strong>Tested:</strong> 24 permission tests pass against the live project.</li>
+  </ul>
+</section>
+
+<section id="nfr">
+  <h2><span class="n">9</span>Quality targets</h2>
+  <ul>
+    <li><strong>Scale:</strong> about 50 users and thousands of events. The data loads once, then updates live.</li>
+    <li><strong>Availability:</strong> runs on the free tiers of GitHub Pages and Supabase. Supabase Pro is recommended for daily backups and no auto-pause.</li>
+    <li><strong>Privacy:</strong> work data only (names, titles, work email, home city, travel status). Photos are stored under unguessable names.</li>
+    <li><strong>Accessibility:</strong> keyboard-usable controls, visible focus, labelled fields, and tap alternatives to drag-and-drop.</li>
+  </ul>
+</section>
+
+<section id="scope">
+  <h2><span class="n">10</span>Out of scope (this version)</h2>
+  <ul>
+    <li><strong>Booking and payment:</strong> Compass doesn't book travel or pay invoices; it tracks their status.</li>
+    <li><strong>Leads and CRM:</strong> there's no lead capture or CRM sync; expected leads are entered by hand.</li>
+    <li><strong>Single sign-on:</strong> Microsoft or Google sign-in isn't included, but can be added later.</li>
+    <li><strong>Native mobile app:</strong> not planned; the web app works on phones.</li>
+  </ul>
+</section>
+
+<section id="open">
+  <h2><span class="n">11</span>Open items</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Item</th><th>Owner</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Add the Claude key (<code>ANTHROPIC_API_KEY</code>) so Discover works</td><td>Daniela</td><td><span class="pill p">Pending</span></td></tr>
+      <tr><td>Email: Gmail app password now; Resend on zenatech.com once the 3 DNS records are in Route 53</td><td>Daniela / IT</td><td><span class="pill p">Pending</span></td></tr>
+      <tr><td>Move to a Zenatech domain using the hosting package</td><td>Dev host / Daniela</td><td><span class="pill">Ready</span></td></tr>
+      <tr><td>Retire the old Supabase project (backup) after sign-off</td><td>Daniela</td><td><span class="pill p">Open</span></td></tr>
+      <tr><td>Link new accounts to existing roster entries automatically</td><td>Dev</td><td><span class="pill p">Proposed</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>Compass · Zenatech Global Events Command Center · Questions: daniela@zenatech.com</footer>
+</main>
+</div>
+</body>
+</html>
